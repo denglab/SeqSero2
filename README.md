@@ -1,9 +1,9 @@
-# SeqSero
+# SeqSero2 alpha-test version
 Salmonella serotyping from genome sequencing data
 
 
 # Introduction 
-SeqSero is a pipeline for Salmonella serotype determination from raw sequencing reads or genome assemblies. A web app is available at www.denglab.info/SeqSero 
+SeqSero2 is a pipeline for Salmonella serotype determination from raw sequencing reads or genome assemblies. This is a alpha test version. For now, it can only accept paired-end raw sequencing reads. A web app will be available soon.
 
 # Dependencies 
 SeqSero depends on:
@@ -25,7 +25,7 @@ SeqSero depends on:
 
     -p <int> (number of threads, only 4 threads will be used for assembly since , default=1)
 
-    -i <file> (/path/to/input/file) 
+    -i <file> (/path/to/input/file; for now, SeqSero2 just accepts separated paired-end reads ) 
 
     -b <string> (algorithms for bwa mapping; 'mem' for mem, 'sam' for samse/sampe; default=mem; optional; for now SeqSero2 is only optimized for "mem" mode) 
 
