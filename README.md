@@ -18,21 +18,22 @@ SeqSero depends on:
 
 5. [SRA Toolkit](http://www.ncbi.nlm.nih.gov/Traces/sra/sra.cgi?cmd=show&f=software&m=software&s=software);
 
-6. [isPcr](http://hgwdev.cse.ucsc.edu/~kent/exe/linux/) written by Jim Kent. 
+6. [SPAdes](http://bioinf.spbau.ru/spades). 
 
 # Executing the code 
-    Usage: SeqSero.py 
+    Usage: SeqSero2.py 
 
-    -m <int> (input data type, '1' for interleaved paired-end reads , '2' for separated paired-end reads, '3' for single reads, '4' for genome assembly) 
+    -p <int> (number of threads, only 4 threads will be used for assembly since , default=1)
 
     -i <file> (/path/to/input/file) 
 
-    -b <string> (algorithms for bwa mapping; 'mem' for mem, 'sam' for samse/sampe; default=sam; optional) 
+    -b <string> (algorithms for bwa mapping; 'mem' for mem, 'sam' for samse/sampe; default=mem; optional; for now SeqSero2 is only optimized for "mem" mode) 
 
 # Output 
-Upon executing the command, a directory named 'SeqSero_result_<time_you_run_SeqSero>' will be created. Your result will be stored in 'Seqsero_result.txt' in that directory
+Upon executing the command, a directory named 'SeqSero_result_<time_you_run_SeqSero>' will be created. Your result will be stored in 'Seqsero_result.txt' in that directory. And the assemblied alleles can also be found in the directory.
 
 # Citation
 Zhang S, Yin Y, Jones MB, Zhang Z, Deatherage Kaiser BL, Dinsmore BA, Fitzgerald C, Fields PI, Deng X.  
 Salmonella serotype determination utilizing high-throughput genome sequencing data.  
 **J Clin Microbiol.** 2015 May;53(5):1685-92.[PMID:25762776](http://jcm.asm.org/content/early/2015/03/05/JCM.00323-15)
+
