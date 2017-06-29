@@ -23,7 +23,7 @@ SeqSero depends on:
 # Executing the code 
     Usage: SeqSero2.py 
 
-    -p <int> (number of threads, only 4 threads will be used for assembly since , default=1)
+    -p <int> (number of threads, if p >4, only 4 threads will be used for assembly since the size of extracted reads is small, default=1)
 
     -i <file> (/path/to/input/file; for now, SeqSero2 just accepts separated paired-end reads ) 
 
