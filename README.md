@@ -3,7 +3,7 @@ Salmonella serotyping from genome sequencing data
 
 
 # Introduction 
-SeqSero2 is a pipeline for Salmonella serotype determination from raw sequencing reads or genome assemblies. This is a alpha test version. For now, it can only accept paired-end raw sequencing reads. A web app will be available soon.
+SeqSero2 is a pipeline for Salmonella serotype determination from raw sequencing reads or genome assemblies. This is a alpha test version. For now, it can only accept separated paired-end reads. A web app will be available soon.
 
 # Dependencies 
 SeqSero depends on:
