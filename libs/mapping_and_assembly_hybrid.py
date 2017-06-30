@@ -1,4 +1,4 @@
-import os,sys,glob,time,itertools
+import os,sys,glob,time,itertools,subprocess
 from Initial_Conditions import phase1
 from Initial_Conditions import phase2
 from Initial_Conditions import phaseO
@@ -438,9 +438,9 @@ def main():
   os.system("samtools view -@ "+threads+" -F 4 -Sbh "+sam+" > "+bam)
   os.system("samtools view -@ "+threads+" -h -o "+sam+" "+bam)
   try:
-    os.system("samtools sort -@ "+threads+" -n "+bam+" >"+sorted_bam)
+    subprocess.call("samtools sort -@ "+threads+" -n "+bam+" >"+sorted_bam,shell=True)
   except:
-    os.system("samtools sort -@ "+threads+" -n "+bam+" "+for_fq+"_sorted")
+    subprocess.call("samtools sort -@ "+threads+" -n "+bam+" "+for_fq+"_sorted",shell=True)
   os.system("bamToFastq -i "+sorted_bam+" -fq "+combined_fq)
   os.system("bamToFastq -i "+sorted_bam+" -fq "+mapped_fq1+" -fq2 "+mapped_fq2 + " 2> /dev/null")
   outdir=current_time+"_temp"
