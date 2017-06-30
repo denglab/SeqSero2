@@ -437,7 +437,10 @@ def main():
     os.system("bwa sampe "+database+" "+for_sai+" "+ rev_sai+" "+for_fq+" "+rev_fq+" > "+sam+ " 2> /dev/null")
   os.system("samtools view -@ "+threads+" -F 4 -Sbh "+sam+" > "+bam)
   os.system("samtools view -@ "+threads+" -h -o "+sam+" "+bam)
-  os.system("samtools sort -@ "+threads+" -n "+bam+" >"+sorted_bam)
+  try:
+    os.system("samtools sort -@ "+threads+" -n "+bam+" >"+sorted_bam)
+  except:
+    os.system("samtools sort -@ "+threads+" -n "+bam+" "+for_fq+"_sorted")
   os.system("bamToFastq -i "+sorted_bam+" -fq "+combined_fq)
   os.system("bamToFastq -i "+sorted_bam+" -fq "+mapped_fq1+" -fq2 "+mapped_fq2 + " 2> /dev/null")
   outdir=current_time+"_temp"
