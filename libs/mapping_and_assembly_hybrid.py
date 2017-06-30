@@ -3,6 +3,7 @@ from Initial_Conditions import phase1
 from Initial_Conditions import phase2
 from Initial_Conditions import phaseO
 from Initial_Conditions import sero
+from distutils.version import LooseVersion
 
 database=sys.argv[1]#used to extract reads
 mapping_mode=sys.argv[2]#mem or sampe
@@ -437,10 +438,16 @@ def main():
     os.system("bwa sampe "+database+" "+for_sai+" "+ rev_sai+" "+for_fq+" "+rev_fq+" > "+sam+ " 2> /dev/null")
   os.system("samtools view -@ "+threads+" -F 4 -Sbh "+sam+" > "+bam)
   os.system("samtools view -@ "+threads+" -h -o "+sam+" "+bam)
-  try:
-    subprocess.call("samtools sort -@ "+threads+" -n "+bam+" >"+sorted_bam,shell=True)
-  except:
-    subprocess.call("samtools sort -@ "+threads+" -n "+bam+" "+for_fq+"_sorted",shell=True)
+  ### check the version of samtools then use differnt commands
+  samtools_version=subprocess.Popen(["samtools"],stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+  out, err = samtools_version.communicate()
+  version = err.split("ersion:")[1].strip().split(" ")[0].strip()
+  print "check samtools version:",version
+  if LooseVersion(version)<=LooseVersion("1.2"):
+    os.system("samtools sort -@ "+threads+" -n "+bam+" "+for_fq+"_sorted")
+  else:
+    os.system("samtools sort -@ "+threads+" -n "+bam+" >"+sorted_bam)
+  ### end of samtools version check and its analysis
   os.system("bamToFastq -i "+sorted_bam+" -fq "+combined_fq)
   os.system("bamToFastq -i "+sorted_bam+" -fq "+mapped_fq1+" -fq2 "+mapped_fq2 + " 2> /dev/null")
   outdir=current_time+"_temp"
