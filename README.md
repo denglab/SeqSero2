@@ -23,14 +23,14 @@ SeqSero depends on:
 # Executing the code 
     Usage: SeqSero2.py 
 
-    -p <int> (number of threads, if p >4, only 4 threads will be used for assembly since the size of extracted reads is small, default=1)
+    -p <int> (number of threads, if p >4, only 4 threads will be used for assembly since the amount of extracted reads is small, default=1)
 
-    -i <file> (/path/to/input/file; for now, SeqSero2 just accepts separated paired-end reads ) 
+    -i <file> (/path/to/input/file; for now, SeqSero2 only accepts separated paired-end reads ) 
 
     -b <string> (algorithms for bwa mapping; 'mem' for mem, 'sam' for samse/sampe; default=mem; optional; for now SeqSero2 is only optimized for "mem" mode) 
 
 # Output 
-Upon executing the command, a directory named 'SeqSero_result_<time_you_run_SeqSero>' will be created. Your result will be stored in 'Seqsero_result.txt' in that directory. And the assemblied alleles can also be found in the directory.
+Upon executing the command, a directory named 'SeqSero_result_Time_your_run' will be created. Your result will be stored in 'Seqsero_result.txt' in that directory. And the assembled alleles can also be found in the directory.
 
 # Citation
 Zhang S, Yin Y, Jones MB, Zhang Z, Deatherage Kaiser BL, Dinsmore BA, Fitzgerald C, Fields PI, Deng X.  
