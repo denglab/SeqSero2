@@ -18,9 +18,9 @@ SeqSero depends on:
 
 5. [SRA Toolkit](http://www.ncbi.nlm.nih.gov/Traces/sra/sra.cgi?cmd=show&f=software&m=software&s=software);
 
-6. [SPAdes](http://bioinf.spbau.ru/spades). 
+6. [SPAdes](http://bioinf.spbau.ru/spades);
 
-7. [Bedtools](http://bedtools.readthedocs.io/en/latest/)
+7. [Bedtools](http://bedtools.readthedocs.io/en/latest/).
 
 # Executing the code 
     Usage: SeqSero2.py 
