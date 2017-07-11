@@ -20,6 +20,8 @@ SeqSero depends on:
 
 6. [SPAdes](http://bioinf.spbau.ru/spades). 
 
+7. [Bedtools](http://bedtools.readthedocs.io/en/latest/)
+
 # Executing the code 
     Usage: SeqSero2.py 
 
