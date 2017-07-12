@@ -33,7 +33,8 @@ def main():
     fnameB=dataset[1].split("/")[-1]
     os.chdir(make_dir)
     os.system("python2.7 "+dirpath+"/libs/mapping_and_assembly_hybrid.py H_and_O_and_specific_genes.fasta "+mapping_mode+" "+str(threads)+" "+fnameA+" "+fnameB)
-    os.system("rm H_and_O_and_specific_genes.fasta* *.bam *.sam *.fastq *.fq temp.txt *.xml "+fnameA+"*_db*")
+    os.system("rm H_and_O_and_specific_genes.fasta* *.bam *.sam *.fastq *.fastq.gz *.fq temp.txt *.xml "+fnameA+"*_db* 2> /dev/null")
+    print "Output_directory:",make_dir
     #print "\n\n\nResult:\n"
     #os.system("cat Seqsero_result.txt")
 

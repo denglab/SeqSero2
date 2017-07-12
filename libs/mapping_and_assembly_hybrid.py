@@ -428,14 +428,15 @@ def main():
   for_sai=for_fq+".sai"
   rev_sai=rev_fq+".sai"
   print "building database..."
-  os.system("bwa index "+database+ " 2> /dev/null")
+  #os.system("bwa index "+database+ " 2> /dev/null")
+  os.system("bwa index "+database+ " 2>> data_log.txt ")
   print "mapping..."
   if mapping_mode=="mem":
-    os.system("bwa mem -t "+threads+" "+database+" "+for_fq+" "+rev_fq+" > "+sam+ " 2> /dev/null") #2014/12/23
+    os.system("bwa mem -t "+threads+" "+database+" "+for_fq+" "+rev_fq+" > "+sam+ " 2>> data_log.txt")
   elif mapping_mode=="sam":
-    os.system("bwa aln -t "+threads+" "+database+" "+for_fq+" > "+for_sai+ " 2> /dev/null")
-    os.system("bwa aln -t "+threads+" "+database+" "+rev_fq+" > "+rev_sai+ " 2> /dev/null")
-    os.system("bwa sampe "+database+" "+for_sai+" "+ rev_sai+" "+for_fq+" "+rev_fq+" > "+sam+ " 2> /dev/null")
+    os.system("bwa aln -t "+threads+" "+database+" "+for_fq+" > "+for_sai+ " 2>> data_log.txt")
+    os.system("bwa aln -t "+threads+" "+database+" "+rev_fq+" > "+rev_sai+ " 2>> data_log.txt")
+    os.system("bwa sampe "+database+" "+for_sai+" "+ rev_sai+" "+for_fq+" "+rev_fq+" > "+sam+ " 2>> data_log.txt")
   os.system("samtools view -@ "+threads+" -F 4 -Sbh "+sam+" > "+bam)
   os.system("samtools view -@ "+threads+" -h -o "+sam+" "+bam)
   ### check the version of samtools then use differnt commands
@@ -449,14 +450,14 @@ def main():
     os.system("samtools sort -@ "+threads+" -n "+bam+" >"+sorted_bam)
   ### end of samtools version check and its analysis
   os.system("bamToFastq -i "+sorted_bam+" -fq "+combined_fq)
-  os.system("bamToFastq -i "+sorted_bam+" -fq "+mapped_fq1+" -fq2 "+mapped_fq2 + " 2> /dev/null")
+  os.system("bamToFastq -i "+sorted_bam+" -fq "+mapped_fq1+" -fq2 "+mapped_fq2 + " 2>> data_log.txt")#2> /dev/null if want no output
   outdir=current_time+"_temp"
   print "assembling..."
   if int(threads)>4:
     t="4"
   else:
     t=threads
-  os.system("spades.py --careful --pe1-s "+combined_fq+" --pe1-1 "+mapped_fq1+" --pe1-2 "+mapped_fq2+" -t "+t+" -o "+outdir+ " > /dev/null")
+  os.system("spades.py --careful --pe1-s "+combined_fq+" --pe1-1 "+mapped_fq1+" --pe1-2 "+mapped_fq2+" -t "+t+" -o "+outdir+ " >> data_log.txt 2>&1")
   new_fasta=for_fq+"_"+database+"_"+mapping_mode+".fasta"
   os.system("mv "+outdir+"/scaffolds.fasta "+new_fasta+ " 2> /dev/null")
   os.system("rm -rf "+outdir+ " 2> /dev/null")
@@ -464,8 +465,8 @@ def main():
   print "blasting..."
   print "\n"
   xmlfile=for_fq+"-extracted_vs_"+database+"_"+mapping_mode+".xml"
-  os.system('makeblastdb -in '+new_fasta+' -out '+new_fasta+'_db '+'-dbtype nucl >temp.txt') #temp.txt is to forbid the blast result interrupt the output of our program###1/27/2015
-  os.system("blastn -word_size 10 -query "+database+" -db "+new_fasta+"_db -out "+xmlfile+" -outfmt 5 >temp.txt")###1/27/2015
+  os.system('makeblastdb -in '+new_fasta+' -out '+new_fasta+'_db '+'-dbtype nucl 2>> data_log.txt') #temp.txt is to forbid the blast result interrupt the output of our program###1/27/2015
+  os.system("blastn -word_size 10 -query "+database+" -db "+new_fasta+"_db -out "+xmlfile+" -outfmt 5 2>> data_log.txt")###1/27/2015
   Final_list=xml_parse_score_comparision_seqsero(xmlfile)
   Final_list_passed=[x for x in Final_list if x[1]>=int(x[0].split("__")[1]) or x[1]>=int(x[0].split("___")[1].split("_")[3])]
   fliC_choice="-"
@@ -478,17 +479,22 @@ def main():
   O_choice,O_nodes,special_gene_list,O_nodes_roles=decide_O_type_and_get_special_genes(Final_list)#decide the O antigen type and also return special-gene-list for further identification
   O_choice=O_choice.split("-")[-1].strip()
   H_contig_roles=decide_contig_roles_for_H_antigen(Final_list)#decide the H antigen contig is fliC or fljB
+  log_file=open("SeqSero_hybrid_assembly_log.txt","a")
   print "O_contigs:"
+  log_file.write("O_contigs:\n")
   for x in O_nodes_roles:
     if "O-1,3,19_not_in_3,10" not in x[0]:#O-1,3,19_not_in_3,10 is just a small size marker
-      print x[0].split("___")[-1],x[0].split("_")[0]
+      print x[0].split("___")[-1],x[0].split("__")[0],"blast score:",x[1]
+      log_file.write(x[0].split("___")[-1]+" "+x[0].split("__")[0]+" "+"blast score: "+str(x[1])+"\n")
   print "H_contigs:"
+  log_file.write("H_contigs:\n")
   H_contig_stat=[]
   for x in H_contig_roles:
     a=0
     for y in Final_list_passed:
         if x[1] in y[0] and y[0].startswith(x[0]):
-            print x[1],x[0],y[0].split("_")[1]
+            print x[1],x[0],y[0].split("_")[1],"blast_score:",y[1]
+            log_file.write(x[1]+" "+x[0]+" "+y[0].split("_")[1]+" "+"blast_score: "+str(y[1])+"\n")
             break
   for x in H_contig_roles:
     #if multiple choices, temporately select the one with longest length for now, will revise in further change
@@ -513,14 +519,10 @@ def main():
   #print Final_list
   ###output
   predict_form,predict_sero,star,star_line,claim=seqsero_from_formula_to_serotypes(O_choice,fliC_choice,fljB_choice,special_gene_list)
-  new_file=open("Seqsero_result_"+for_fq+"_"+current_time+"_output.txt","w")
+  new_file=open("Seqsero_result.txt","w")
   new_file.write("Input files:\t"+for_fq+" "+rev_fq+"\n"+"O antigen prediction:\t"+"O-"+O_choice+"\n"+"H1 antigen prediction(fliC):\t"+fliC_choice+"\n"+"H2 antigen prediction(fljB):\t"+fljB_choice+"\n"+"Predicted antigenic profile:\t"+predict_form+"\n"+"Predicted serotype(s):\t"+predict_sero+star+"\n"+star+star_line+claim+"\n")#+##
   new_file.close()
-  print "results in:","Seqsero_result_"+for_fq+"_"+current_time+"_output.txt"
-  print "log file:","Seqsero_result_"+for_fq+"_"+current_time+"_log.txt"
-  os.system("cat "+"Seqsero_result_"+for_fq+"_"+current_time+"_output.txt")
-  os.system("cp "+"Seqsero_result_"+for_fq+"_"+current_time+"_output.txt"+" Seqsero_result.txt")
-  #print Final_list
+  os.system("cat Seqsero_result.txt")
 
 if __name__ == '__main__':
   main()
