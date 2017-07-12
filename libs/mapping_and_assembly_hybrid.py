@@ -21,22 +21,28 @@ def xml_parse_score_comparision_seqsero(xmlfile):
   handle=list(handle)
   List=[]
   List_score=[]
+  List_ids=[]
   for i in range(len(handle)):
     if len(handle[i].alignments)>0:
       for j in range(len(handle[i].alignments)):
         score=0
+        ids=0
         List.append(handle[i].query.strip()+"___"+handle[i].alignments[j].hit_def)
         for z in range(len(handle[i].alignments[j].hsps)):
           if "last" in handle[i].query or "first" in handle[i].query:
             score+=handle[i].alignments[j].hsps[z].bits
+            ids+=float(handle[i].alignments[j].hsps[z].identities)/handle[i].query_length
           else:
             if handle[i].alignments[j].hsps[z].align_length>=30:
               #for the long alleles, filter noise parts
-              score+=handle[i].alignments[j].hsps[z].bits           
+              score+=handle[i].alignments[j].hsps[z].bits
+              ids+=float(handle[i].alignments[j].hsps[z].identities)/handle[i].query_length
         List_score.append(score)
-  temp=dict(zip(List,List_score))
-  Final_list=sorted(temp.iteritems(), key=lambda d:d[1], reverse = True)
+        List_ids.append(ids)
+  temp=zip(List,List_score,List_ids)
+  Final_list=sorted(temp, key=lambda d:d[1], reverse = True)
   return Final_list
+
 
 def Uniq(L,sort_on_fre="none"): #return the uniq list and the count number
   Old=L
@@ -465,8 +471,8 @@ def main():
   print "blasting..."
   print "\n"
   xmlfile=for_fq+"-extracted_vs_"+database+"_"+mapping_mode+".xml"
-  os.system('makeblastdb -in '+new_fasta+' -out '+new_fasta+'_db '+'-dbtype nucl 2>> data_log.txt') #temp.txt is to forbid the blast result interrupt the output of our program###1/27/2015
-  os.system("blastn -word_size 10 -query "+database+" -db "+new_fasta+"_db -out "+xmlfile+" -outfmt 5 2>> data_log.txt")###1/27/2015
+  os.system('makeblastdb -in '+new_fasta+' -out '+new_fasta+'_db '+'-dbtype nucl >> data_log.txt 2>&1') #temp.txt is to forbid the blast result interrupt the output of our program###1/27/2015
+  os.system("blastn -word_size 10 -query "+database+" -db "+new_fasta+"_db -out "+xmlfile+" -outfmt 5 >> data_log.txt 2>&1")###1/27/2015
   Final_list=xml_parse_score_comparision_seqsero(xmlfile)
   Final_list_passed=[x for x in Final_list if x[1]>=int(x[0].split("__")[1]) or x[1]>=int(x[0].split("___")[1].split("_")[3])]
   fliC_choice="-"
@@ -484,8 +490,8 @@ def main():
   log_file.write("O_contigs:\n")
   for x in O_nodes_roles:
     if "O-1,3,19_not_in_3,10" not in x[0]:#O-1,3,19_not_in_3,10 is just a small size marker
-      print x[0].split("___")[-1],x[0].split("__")[0],"blast score:",x[1]
-      log_file.write(x[0].split("___")[-1]+" "+x[0].split("__")[0]+" "+"blast score: "+str(x[1])+"\n")
+      print x[0].split("___")[-1],x[0].split("__")[0],"blast score:",x[1],"identity%:",str(round(x[2]*100,2))+"%"
+      log_file.write(x[0].split("___")[-1]+" "+x[0].split("__")[0]+" "+"blast score: "+str(x[1])+"identity%:"+str(round(x[2]*100,2))+"%"+"\n")
   print "H_contigs:"
   log_file.write("H_contigs:\n")
   H_contig_stat=[]
@@ -493,8 +499,8 @@ def main():
     a=0
     for y in Final_list_passed:
         if x[1] in y[0] and y[0].startswith(x[0]):
-            print x[1],x[0],y[0].split("_")[1],"blast_score:",y[1]
-            log_file.write(x[1]+" "+x[0]+" "+y[0].split("_")[1]+" "+"blast_score: "+str(y[1])+"\n")
+            print x[1],x[0],y[0].split("_")[1],"blast_score:",y[1],"identity%:",str(round(y[2]*100,2))+"%"
+            log_file.write(x[1]+" "+x[0]+" "+y[0].split("_")[1]+" "+"blast_score: "+str(y[1])+" identity%:"+str(round(y[2]*100,2))+"%"+"\n")
             break
   for x in H_contig_roles:
     #if multiple choices, temporately select the one with longest length for now, will revise in further change
