@@ -171,7 +171,6 @@ def fliC_or_fljB_judge_from_head_tail_sequence(nodes_list,tail_head_list,Final_l
           role=z[0].split("_")[0]
           break
     #print x,role,len(a)
-    #print a
     role_list.append((role,x))
   if len(role_list)==2:
     if role_list[0][0]==role_list[1][0]:#this is the most cocmmon error, two antigen were assigned to same phase
