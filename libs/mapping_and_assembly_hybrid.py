@@ -230,6 +230,7 @@ def decide_O_type_and_get_special_genes(Final_list):
   c,d=Uniq(nodes)
   #print "potential O antigen contig",c
   final_O=[]
+  O_nodes_list=[]
   for x in c:#c is the list for contigs
     temp=0
     for y in Final_list_passed:
@@ -257,7 +258,6 @@ def decide_O_type_and_get_special_genes(Final_list):
     O_choice="-"
   else:
     O_list=[]
-    O_nodes_list=[]
     for x in final_O:
       O_list.append(x[0].split("__")[0])
       if not "O-1,3,19_not_in_3,10__130" in x[0]:#O-1,3,19_not_in_3,10 is too small, which may affect further analysis
