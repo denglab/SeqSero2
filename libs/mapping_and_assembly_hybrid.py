@@ -5,12 +5,7 @@ from Initial_Conditions import phaseO
 from Initial_Conditions import sero
 from distutils.version import LooseVersion
 
-database=sys.argv[1]#used to extract reads
-mapping_mode=sys.argv[2]#mem or sampe
-threads=sys.argv[3]
-for_fq=sys.argv[4]
-rev_fq=sys.argv[5]
-current_time=time.strftime("%Y_%m_%d_%H_%M_%S", time.localtime())
+
 
 
 def xml_parse_score_comparision_seqsero(xmlfile):
@@ -184,7 +179,7 @@ def fliC_or_fljB_judge_from_head_tail_sequence(nodes_list,tail_head_list,Final_l
 def decide_contig_roles_for_H_antigen(Final_list):
   #used to decide which contig is FliC and which one is fljB
   contigs=[]
-  Final_list_passed=[x for x in Final_list if x[1]>=int(x[0].split("__")[1]) or x[1]>=int(x[0].split("___")[1].split("_")[3])]
+  Final_list_passed=[x for x in Final_list if float(x[0].split("_cov_")[1])>=2.5 and (x[1]>=int(x[0].split("__")[1]) or x[1]>=int(x[0].split("___")[1].split("_")[3]))]
   nodes=[]
   for x in Final_list_passed:
     if x[0].startswith("fl") and "last" not in x[0] and "first" not in x[0]:
@@ -219,7 +214,7 @@ def decide_O_type_and_get_special_genes(Final_list):
   O_choice="?"
   O_list=[]
   special_genes=[]
-  Final_list_passed=[x for x in Final_list if x[1]>=int(x[0].split("__")[1]) or x[1]>=int(x[0].split("___")[1].split("_")[3])]
+  Final_list_passed=[x for x in Final_list if float(x[0].split("_cov_")[1])>=2.5 and (x[1]>=int(x[0].split("__")[1]) or x[1]>=int(x[0].split("___")[1].split("_")[3]))]
   nodes=[]
   for x in Final_list_passed:
     if x[0].startswith("O-"):
@@ -244,10 +239,12 @@ def decide_O_type_and_get_special_genes(Final_list):
     #not consider O-1,3,19_not_in_3,10, too short compared with others
     if "O-1,3,19_not_in_3,10" not in x[0] and int(x[0].split("__")[1].split("___")[0])+800 <= int(x[0].split("length_")[1].split("_")[0]):#gene length << contig length; for now give 300*2 (for secureity can use 400*2) as flank region
       pointer=x[0].split("___")[1].strip()#store the contig name
+      print pointer
     if pointer!=0:#it has potential merge event
-      for y in Final_list_passed:
-        if pointer in y[0] and y not in final_O and y[1]>=int(y[0].split("__")[1].split("___")[0])*1.5:#that's a realtively strict filter now; if passed, it has merge event and add one more to final_O
+      for y in Final_list:
+        if pointer in y[0] and y not in final_O and (y[1]>=int(y[0].split("__")[1].split("___")[0])*1.5 or (y[1]>=int(y[0].split("__")[1].split("___")[0])*y[2] and y[1]>=400)):#that's a realtively strict filter now; if passed, it has merge event and add one more to final_O
           potenial_new_gene=y
+          print potenial_new_gene
           break
   if potenial_new_gene!="":
     print "two differnt genes in same contig, fix it for O antigen"
@@ -424,6 +421,12 @@ def seqsero_from_formula_to_serotypes(Otype,fliC,fljB,special_gene_list):
   return predict_form,predict_sero,star,star_line,claim
 
 def main():
+  database=sys.argv[1]#used to extract reads
+  mapping_mode=sys.argv[2]#mem or sampe
+  threads=sys.argv[3]
+  for_fq=sys.argv[4]
+  rev_fq=sys.argv[5]
+  current_time=time.strftime("%Y_%m_%d_%H_%M_%S", time.localtime())
   sam=for_fq+".sam"
   bam=for_fq+".bam"
   sorted_bam=for_fq+"_sorted.bam"
@@ -473,7 +476,7 @@ def main():
   os.system('makeblastdb -in '+new_fasta+' -out '+new_fasta+'_db '+'-dbtype nucl >> data_log.txt 2>&1') #temp.txt is to forbid the blast result interrupt the output of our program###1/27/2015
   os.system("blastn -word_size 10 -query "+database+" -db "+new_fasta+"_db -out "+xmlfile+" -outfmt 5 >> data_log.txt 2>&1")###1/27/2015
   Final_list=xml_parse_score_comparision_seqsero(xmlfile)
-  Final_list_passed=[x for x in Final_list if x[1]>=int(x[0].split("__")[1]) or x[1]>=int(x[0].split("___")[1].split("_")[3])]
+  Final_list_passed=[x for x in Final_list if float(x[0].split("_cov_")[1])>=2.5 and (x[1]>=int(x[0].split("__")[1]) or x[1]>=int(x[0].split("___")[1].split("_")[3]))]
   fliC_choice="-"
   fljB_choice="-"
   fliC_contig="NA"
