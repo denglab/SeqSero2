@@ -506,6 +506,7 @@ def main():
             break
   for x in H_contig_roles:
     #if multiple choices, temporately select the one with longest length for now, will revise in further change
+    #in future, change to select the one with highest coverage
     if "fliC" == x[0] and int(x[1].split("_")[3])>=fliC_length and x[1] not in O_nodes:#remember to avoid the effect of O-type contig, so should not in O_node list
       fliC_contig=x[1]
       fliC_length=int(x[1].split("_")[3])
