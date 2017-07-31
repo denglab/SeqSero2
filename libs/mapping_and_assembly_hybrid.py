@@ -179,7 +179,7 @@ def fliC_or_fljB_judge_from_head_tail_sequence(nodes_list,tail_head_list,Final_l
 def decide_contig_roles_for_H_antigen(Final_list):
   #used to decide which contig is FliC and which one is fljB
   contigs=[]
-  Final_list_passed=[x for x in Final_list if float(x[0].split("_cov_")[1])>=2.5 and (x[1]>=int(x[0].split("__")[1]) or x[1]>=int(x[0].split("___")[1].split("_")[3]))]
+  Final_list_passed=[x for x in Final_list if float(x[0].split("_cov_")[1])>=3.5 and (x[1]>=int(x[0].split("__")[1]) or x[1]>=int(x[0].split("___")[1].split("_")[3]))]
   nodes=[]
   for x in Final_list_passed:
     if x[0].startswith("fl") and "last" not in x[0] and "first" not in x[0]:
@@ -214,7 +214,7 @@ def decide_O_type_and_get_special_genes(Final_list):
   O_choice="?"
   O_list=[]
   special_genes=[]
-  Final_list_passed=[x for x in Final_list if float(x[0].split("_cov_")[1])>=2.5 and (x[1]>=int(x[0].split("__")[1]) or x[1]>=int(x[0].split("___")[1].split("_")[3]))]
+  Final_list_passed=[x for x in Final_list if float(x[0].split("_cov_")[1])>=3.5 and (x[1]>=int(x[0].split("__")[1]) or x[1]>=int(x[0].split("___")[1].split("_")[3]))]
   nodes=[]
   for x in Final_list_passed:
     if x[0].startswith("O-"):
@@ -476,7 +476,7 @@ def main():
   os.system('makeblastdb -in '+new_fasta+' -out '+new_fasta+'_db '+'-dbtype nucl >> data_log.txt 2>&1') #temp.txt is to forbid the blast result interrupt the output of our program###1/27/2015
   os.system("blastn -word_size 10 -query "+database+" -db "+new_fasta+"_db -out "+xmlfile+" -outfmt 5 >> data_log.txt 2>&1")###1/27/2015
   Final_list=xml_parse_score_comparision_seqsero(xmlfile)
-  Final_list_passed=[x for x in Final_list if float(x[0].split("_cov_")[1])>=2.5 and (x[1]>=int(x[0].split("__")[1]) or x[1]>=int(x[0].split("___")[1].split("_")[3]))]
+  Final_list_passed=[x for x in Final_list if float(x[0].split("_cov_")[1])>=3.5 and (x[1]>=int(x[0].split("__")[1]) or x[1]>=int(x[0].split("___")[1].split("_")[3]))]
   fliC_choice="-"
   fljB_choice="-"
   fliC_contig="NA"
@@ -506,7 +506,6 @@ def main():
             break
   for x in H_contig_roles:
     #if multiple choices, temporately select the one with longest length for now, will revise in further change
-    #in future, change to select the one with highest coverage
     if "fliC" == x[0] and int(x[1].split("_")[3])>=fliC_length and x[1] not in O_nodes:#remember to avoid the effect of O-type contig, so should not in O_node list
       fliC_contig=x[1]
       fliC_length=int(x[1].split("_")[3])
@@ -514,9 +513,9 @@ def main():
       fljB_contig=x[1]
       fljB_length=int(x[1].split("_")[3])
   for x in Final_list_passed:
-    if fliC_choice=="-" and "fliC" in x[0] and fliC_contig in x[0] :
+    if fliC_choice=="-" and "_fliC_" in x[0] and fliC_contig in x[0] :
       fliC_choice=x[0].split("_")[1]
-    elif fljB_choice=="-" and "fljB" in x[0] and fljB_contig in x[0]:
+    elif fljB_choice=="-" and "_fljB_" in x[0] and fljB_contig in x[0]:
       fljB_choice=x[0].split("_")[1]
     elif fliC_choice!="-" and fljB_choice!="-":
       break
