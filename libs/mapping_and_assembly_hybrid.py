@@ -513,9 +513,9 @@ def main():
       fljB_contig=x[1]
       fljB_length=int(x[1].split("_")[3])
   for x in Final_list_passed:
-    if fliC_choice=="-" and "_fliC_" in x[0] and fliC_contig in x[0] :
+    if fliC_choice=="-" and "fliC_" in x[0] and fliC_contig in x[0] :
       fliC_choice=x[0].split("_")[1]
-    elif fljB_choice=="-" and "_fljB_" in x[0] and fljB_contig in x[0]:
+    elif fljB_choice=="-" and "fljB_" in x[0] and fljB_contig in x[0]:
       fljB_choice=x[0].split("_")[1]
     elif fliC_choice!="-" and fljB_choice!="-":
       break
