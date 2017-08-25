@@ -467,7 +467,8 @@ def main():
     t=threads
   os.system("spades.py --careful --pe1-s "+combined_fq+" --pe1-1 "+mapped_fq1+" --pe1-2 "+mapped_fq2+" -t "+t+" -o "+outdir+ " >> data_log.txt 2>&1")
   new_fasta=for_fq+"_"+database+"_"+mapping_mode+".fasta"
-  os.system("mv "+outdir+"/scaffolds.fasta "+new_fasta+ " 2> /dev/null")
+  os.system("mv "+outdir+"/contigs.fasta "+new_fasta+ " 2> /dev/null")
+  #os.system("mv "+outdir+"/scaffolds.fasta "+new_fasta+ " 2> /dev/null") contigs.fasta
   os.system("rm -rf "+outdir+ " 2> /dev/null")
   ### begin blast
   print "blasting..."
