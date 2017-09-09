@@ -498,13 +498,22 @@ def main():
   print "H_contigs:"
   log_file.write("H_contigs:\n")
   H_contig_stat=[]
-  for x in H_contig_roles:
+  for i in range(len(H_contig_roles)):
+    x=H_contig_roles[i]
     a=0
     for y in Final_list_passed:
-        if x[1] in y[0] and y[0].startswith(x[0]):
-            print x[1],x[0],y[0].split("_")[1],"blast_score:",y[1],"identity%:",str(round(y[2]*100,2))+"%"
-            log_file.write(x[1]+" "+x[0]+" "+y[0].split("_")[1]+" "+"blast_score: "+str(y[1])+" identity%:"+str(round(y[2]*100,2))+"%"+"\n")
-            break
+      if x[1] in y[0] and y[0].startswith(x[0]):
+        if "first" in y[0] or "last" in y[0]: #this is the final filter to decide it's fliC or fljB, if can't pass, then can't decide
+          for y in Final_list_passed: #it's impossible to has the "first" and "last" allele as prediction, so re-do it
+            if x[1] in y[0]:#it's very possible to be third phase allele, so no need to make it must be fliC or fljB
+              print x[1],"can't_decide_fliC_or_fljB",y[0].split("_")[1],"blast_score:",y[1],"identity%:",str(round(y[2]*100,2))+"%"
+              log_file.write(x[1]+" "+x[0]+" "+y[0].split("_")[1]+" "+"blast_score: "+str(y[1])+" identity%:"+str(round(y[2]*100,2))+"%"+"\n")
+              H_contig_roles[i]="can't decide fliC or fljB, may be third phase"
+              break
+        else:
+          print x[1],x[0],y[0].split("_")[1],"blast_score:",y[1],"identity%:",str(round(y[2]*100,2))+"%"
+          log_file.write(x[1]+" "+x[0]+" "+y[0].split("_")[1]+" "+"blast_score: "+str(y[1])+" identity%:"+str(round(y[2]*100,2))+"%"+"\n")
+        break
   for x in H_contig_roles:
     #if multiple choices, temporately select the one with longest length for now, will revise in further change
     if "fliC" == x[0] and int(x[1].split("_")[3])>=fliC_length and x[1] not in O_nodes:#remember to avoid the effect of O-type contig, so should not in O_node list
