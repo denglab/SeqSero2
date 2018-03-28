@@ -3,12 +3,26 @@ Salmonella serotyping from genome sequencing data
 
 
 # Introduction 
-SeqSero2 is a pipeline for Salmonella serotype determination from raw sequencing reads or genome assemblies. This is a alpha test version. For now, it can only accept separated paired-end reads. A web app will be available soon.
+SeqSero2 is a pipeline for Salmonella serotype determination from raw sequencing reads or genome assemblies. This is a alpha test version. A web app will be available soon.
+
 
 # Dependencies 
-SeqSero depends on:
+SeqSero has two modes:
 
-1. Python 2.7 and [Biopython 1.65](http://biopython.org/wiki/Download); 
+
+(A) k-mer based mode (default), which applies unique k-mers of serotype determinant alleles to determine Salmonella serotypes in a fast speed. Special thanks to Dr. Hendrik Den Bakker for his significant contribution to this mode, details can be found in [SeqSeroK](https://github.com/hcdenbakker/SeqSeroK) and [SalmID] (https://github.com/hcdenbakker/SalmID).
+
+K-mer mode is a independant pipeline, it only requires:
+
+1. Python 3;
+2. [SRA Toolkit](http://www.ncbi.nlm.nih.gov/Traces/sra/sra.cgi?cmd=show&f=software&m=software&s=software) (optional, just used to fastq-dump sra files);
+
+
+(B) allele based mode (if users want to extract serotype determinant alleles), which applies a hybrid approach of reads-mapping and micro-assembly.
+
+Allele mode depends on:
+
+1. Python 3; 
 
 2. [Burrows-Wheeler Aligner](http://sourceforge.net/projects/bio-bwa/files/); 
 
@@ -20,22 +34,34 @@ SeqSero depends on:
 
 6. [SPAdes](http://bioinf.spbau.ru/spades);
 
-7. [Bedtools](http://bedtools.readthedocs.io/en/latest/).
+7. [Bedtools](http://bedtools.readthedocs.io/en/latest/);
+
+8. [SalmID](https://github.com/hcdenbakker/SalmID).
+
 
 # Executing the code 
-    Usage: SeqSero2.py 
+    Usage: SeqSero2_package.py 
 
-    -p <int> (number of threads, if p >4, only 4 threads will be used for assembly since the amount of extracted reads is small, default=1)
+    -m <string> (which mode to apply, 'k'(kmer mode), 'a'(allele mode), default=k)
 
-    -i <file> (/path/to/input/file; for now, SeqSero2 only accepts separated paired-end reads ) 
+    -t <string> (input data type, '1' for interleaved paired-end reads, '2' for separated paired-end reads, '3' for single reads, '4' for genome assembly, '5' for nanopore fasta, '6'for nanopore fastq)
 
-    -b <string> (algorithms for bwa mapping; 'mem' for mem, 'sam' for samse/sampe; default=mem; optional; for now SeqSero2 is only optimized for "mem" mode) 
+    -i <file> (/path/to/input/file)
+
+    -p <int> (number of threads for allele mode, if p >4, only 4 threads will be used for assembly since the amount of extracted reads is small, default=1) 
+
+    -b <string> (algorithms for bwa mapping for allele mode; 'mem' for mem, 'sam' for samse/sampe; default=mem; optional; for now we only optimized for default "mem" mode)
+ 
+    -d <string> (output directory name, if not set, the output directory would be 'SeqSero_result_'+time stamp+one random number)
+	
+	-c <flag> (if '-c' was flagged, SeqSero2 will use clean mode and only output serotyping prediction without the directory containing log files)
+	
 
 # Output 
-Upon executing the command, a directory named 'SeqSero_result_Time_your_run' will be created. Your result will be stored in 'Seqsero_result.txt' in that directory. And the assembled alleles can also be found in the directory.
+Upon executing the command, a directory named 'SeqSero_result_Time_your_run' will be created. Your result will be stored in 'Seqsero_result.txt' in that directory. And the assembled alleles can also be found in the directory if using "-m a" (allele mode).
+
 
 # Citation
 Zhang S, Yin Y, Jones MB, Zhang Z, Deatherage Kaiser BL, Dinsmore BA, Fitzgerald C, Fields PI, Deng X.  
 Salmonella serotype determination utilizing high-throughput genome sequencing data.  
 **J Clin Microbiol.** 2015 May;53(5):1685-92.[PMID:25762776](http://jcm.asm.org/content/early/2015/03/05/JCM.00323-15)
-
