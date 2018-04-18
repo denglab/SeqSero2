@@ -438,16 +438,23 @@ def xml_parse_score_comparision_seqsero(xmlfile):
       for j in range(len(handle[i].alignments)):
         score=0
         ids=0
+        cover_region=set() #fixed problem that repeated calculation leading percentage > 1
         List.append(handle[i].query.strip()+"___"+handle[i].alignments[j].hit_def)
         for z in range(len(handle[i].alignments[j].hsps)):
-          if "last" in handle[i].query or "first" in handle[i].query:
-            score+=handle[i].alignments[j].hsps[z].bits
-            ids+=float(handle[i].alignments[j].hsps[z].identities)/handle[i].query_length
+          hsp=handle[i].alignments[j].hsps[z]
+          temp=set(range(hsp.query_start,hsp.query_end))
+          if len(cover_region)==0:
+            cover_region=cover_region|temp
+            fraction=1
           else:
-            if handle[i].alignments[j].hsps[z].align_length>=30:
-              #for the long alleles, filter noise parts
-              score+=handle[i].alignments[j].hsps[z].bits
-              ids+=float(handle[i].alignments[j].hsps[z].identities)/handle[i].query_length
+            fraction=1-len(cover_region&temp)/float(len(temp))
+            cover_region=cover_region|temp
+          if "last" in handle[i].query or "first" in handle[i].query:
+            score+=hsp.bits*fraction
+            ids+=float(hsp.identities)/handle[i].query_length*fraction
+          else:
+            score+=hsp.bits*fraction
+            ids+=float(hsp.identities)/handle[i].query_length*fraction
         List_score.append(score)
         List_ids.append(ids)
   temp=zip(List,List_score,List_ids)
