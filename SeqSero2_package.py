@@ -357,6 +357,7 @@ def seqsero_from_formula_to_serotypes(Otype, fliC, fljB, special_gene_list,subsp
     claim = "The serotype(s) is/are the only serotype(s) with the indicated antigenic profile currently recognized in the Kauffmann White Scheme.  New serotypes can emerge and the possibility exists that this antigenic profile may emerge in a different subspecies.  Identification of strains to the subspecies level should accompany serotype determination; the same antigenic profile in different subspecies is considered different serotypes."
     if "N/A" in predict_sero:
         claim = ""
+    #special test for Typhimurium
     if "Typhimurium" in predict_sero or predict_form == "4:i:-":
         normal = 0
         mutation = 0
@@ -373,6 +374,7 @@ def seqsero_from_formula_to_serotypes(Otype, fliC, fljB, special_gene_list,subsp
             star_line = "Detected the deletion of O5-."
         else:
             pass
+    #special test for Paratyphi B
     if "Paratyphi B" in predict_sero or predict_form == "4:b:-":
         normal = 0
         mutation = 0
@@ -393,6 +395,7 @@ def seqsero_from_formula_to_serotypes(Otype, fliC, fljB, special_gene_list,subsp
         else:
             star = "*"
             star_line = "Failed to detect the SNP for dt-, can't decide it's a Paratyphi B variant L(+) tartrate(+) or not."
+    #special test for O13,22 and O13,23
     if Otype=="13":
       ex_dir = os.path.dirname(os.path.realpath(__file__))
       f = open(ex_dir + '/special.pickle', 'rb')
@@ -420,6 +423,17 @@ def seqsero_from_formula_to_serotypes(Otype, fliC, fljB, special_gene_list,subsp
             else:
               star = "*"
               star_line = "Fail to detect O22 and O23 differences."
+    #special test for O6,8 
+    merge_O68_list=["Blockley","Bovismorbificans","Hadar","Litchfield","Manhattan","Muenchen"]
+    for x in merge_O68_list:
+      if x in predict_sero:
+        predict_sero=x
+        star=""
+        star_line=""
+    #special test for Montevideo; most of them are monophasic
+    if "Montevideo" in predict_sero and "1,2,7" in predict_form:
+      star="*"
+      star_line="Montevideo is almost always monophasic, having an antigen called for the fljB position may be a result of Salmonella-Salmonella contamination."
     return predict_form, predict_sero, star, star_line, claim
 ### End of SeqSero Kmer part
 

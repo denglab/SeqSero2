@@ -60,7 +60,7 @@ Allele mode depends on:
 # Examples
 K-mer mode:
 
-    # K-mer (default), for seperated paired-end raw reads ("-t 2")
+    # K-mer (default), for separated paired-end raw reads ("-t 2")
 	SeqSero2_package.py -t 2 -i R1.fastq.gz R2.fastq.gz
 	
 	# K-mer (default), for assemblies ("-t 4", assembly only predcited by K-mer mode)
@@ -68,7 +68,7 @@ K-mer mode:
 
 Allele mode:
 
-    # Allele mode ("-m a"), for seperated paired-end raw reads ("-t 2"), use 10 threads in mapping and assembly ("-p 10")
+    # Allele mode ("-m a"), for separated paired-end raw reads ("-t 2"), use 10 threads in mapping and assembly ("-p 10")
 	SeqSero2_package.py -m a -p 10 -t 2 -i R1.fastq.gz R2.fastq.gz
 	
 	
