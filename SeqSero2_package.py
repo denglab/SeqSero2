@@ -1046,7 +1046,7 @@ def main():
       for_fq,rev_fq=get_input_files(make_dir,input_file,data_type,dirpath)
       input_file = for_fq #-k will just use forward because not all reads were used
       os.chdir(make_dir)
-      ex_dir = os.path.dirname(os.path.realpath(__file__))
+      ex_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
       f = open(ex_dir + '/antigens.pickle', 'rb')
       lib_dict = pickle.load(f)
       f.close
