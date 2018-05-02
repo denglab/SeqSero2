@@ -10,7 +10,7 @@ SeqSero2 is a pipeline for Salmonella serotype determination from raw sequencing
 SeqSero has two modes:
 
 
-(A) k-mer based mode (default), which applies unique k-mers of serotype determinant alleles to determine Salmonella serotypes in a fast speed. Special thanks to Dr. Hendrik Den Bakker for his significant contribution to this mode, details can be found in [SeqSeroK](https://github.com/hcdenbakker/SeqSeroK) and [SalmID] (https://github.com/hcdenbakker/SalmID).
+(A) k-mer based mode (default), which applies unique k-mers of serotype determinant alleles to determine Salmonella serotypes in a fast speed. Special thanks to Dr. Hendrik Den Bakker for his significant contribution to this mode, details can be found in [SeqSeroK](https://github.com/hcdenbakker/SeqSeroK) and [SalmID](https://github.com/hcdenbakker/SalmID).
 
 K-mer mode is a independant pipeline, it only requires:
 
@@ -40,6 +40,8 @@ Allele mode depends on:
 
 
 # Executing the code 
+Make sure all SeqSero2 and its dependency executables are added to your path (e.g. to ~/.bashrc). Then type SeqSero2_package.py to get detailed instructions.
+
     Usage: SeqSero2_package.py 
 
     -m <string> (which mode to apply, 'k'(kmer mode), 'a'(allele mode), default=k)
@@ -64,7 +66,7 @@ K-mer mode:
 	SeqSero2_package.py -t 2 -i R1.fastq.gz R2.fastq.gz
 	
 	# K-mer (default), for assemblies ("-t 4", assembly only predcited by K-mer mode)
-	SeqSero2_package.py -t 4 -i R1.fastq.gz R2.fastq.gz
+	SeqSero2_package.py -t 4 -i assembly.fasta
 
 Allele mode:
 
