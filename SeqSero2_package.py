@@ -1024,7 +1024,7 @@ def main():
         xmlfile=extract_mapped_reads_and_do_assembly_and_blast(current_time,sorted_bam,combined_fq,mapped_fq1,mapped_fq2,threads,fnameA,fnameB,database,mapping_mode) #extract the mapped reads and do micro assembly and blast
         Final_list=xml_parse_score_comparision_seqsero(xmlfile) #analyze xml and get parsed results
         Final_list_passed=[x for x in Final_list if float(x[0].split("_cov_")[1])>=3.5 and (x[1]>=int(x[0].split("__")[1]) or x[1]>=int(x[0].split("___")[1].split("_")[3]))]
-        O_choice,fliC_choice,fljB_choice,special_gene_list=predict_O_and_H_types(for_fq,rev_fq,Final_list,Final_list_passed) #predict O, fliC and fljB
+        O_choice,fliC_choice,fljB_choice,special_gene_list=predict_O_and_H_types(Final_list,Final_list_passed) #predict O, fliC and fljB
         subspecies=judge_subspecies(fnameA) #predict subspecies
         ###output
         predict_form,predict_sero,star,star_line,claim=seqsero_from_formula_to_serotypes(O_choice,fliC_choice,fljB_choice,special_gene_list,subspecies)
