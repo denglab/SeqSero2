@@ -594,13 +594,13 @@ def decide_O_type_and_get_special_genes(Final_list,Final_list_passed):
   #decide O based on Final_list
   O_choice="?"
   O_list=[]
-  special_genes=[]
+  special_genes={}
   nodes=[]
   for x in Final_list_passed:
     if x[0].startswith("O-"):
       nodes.append(x[0].split("___")[1].strip())
     elif not x[0].startswith("fl"):
-      special_genes.append(x)
+      special_genes[x[0]]=x[-1]
   #print "special_genes:",special_genes
   c,d=Uniq(nodes)
   #print "potential O antigen contig",c
@@ -652,10 +652,10 @@ def decide_O_type_and_get_special_genes(Final_list,Final_list_passed):
         O2=0
         O9=0
         for z in special_genes:
-          if "tyr-O-9" in z[0]:
-            O9=z[1]
-          elif "tyr-O-2" in z[0]:
-            O2=z[1]
+          if "tyr-O-9" in z:
+            O9=special_genes[z]
+          elif "tyr-O-2" in z:
+            O2=special_genes[z]
         if O2>O9:
           O_choice="O-2"
         elif O2<O9:
@@ -723,7 +723,7 @@ def get_input_files(make_dir,input_file,data_type,dirpath):
   os.chdir("..")
   return for_fq,rev_fq
 
-def predict_O_and_H_types(for_fq,rev_fq,Final_list,Final_list_passed):
+def predict_O_and_H_types(Final_list,Final_list_passed):
   #get O and H types from Final_list from blast parsing; allele mode
   fliC_choice="-"
   fljB_choice="-"
