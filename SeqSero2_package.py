@@ -162,7 +162,7 @@ def target_read_kmerizer(file, k, kmerDict):
                     k1 for k1 in createKmerDict_reads([str(line)], k)
                 ]  #changed k to k1, just want to avoid the mixes of this "k" (kmer) to the "k" above (kmer length)
         i += 1
-        if total_coverage >= 2000000:
+        if total_coverage >= 4000000:
             break
     return set(target_mers)
 
@@ -617,7 +617,7 @@ def decide_O_type_and_get_special_genes(Final_list,Final_list_passed):
   for x in final_O:
     pointer=0 #for genes merged or not
     #not consider O-1,3,19_not_in_3,10, too short compared with others
-    if "O-1,3,19_not_in_3,10" not in x[0] and int(x[0].split("__")[1].split("___")[0])+800 <= int(x[0].split("length_")[1].split("_")[0]):#gene length << contig length; for now give 300*2 (for secureity can use 400*2) as flank region
+    if "O-1,3,19_not_in_3,10" not in x[0] and int(x[0].split("__")[1].split("___")[0])*x[2]+850 <= int(x[0].split("length_")[1].split("_")[0]):#gene length << contig length; for now give 300*2 (for secureity can use 400*2) as flank region
       pointer=x[0].split("___")[1].strip()#store the contig name
       print(pointer)
     if pointer!=0:#it has potential merge event
@@ -640,7 +640,7 @@ def decide_O_type_and_get_special_genes(Final_list,Final_list_passed):
       if not "O-1,3,19_not_in_3,10__130" in x[0]:#O-1,3,19_not_in_3,10 is too small, which may affect further analysis
         O_nodes_list.append(x[0].split("___")[1])
     ### special test for O9,46 and O3,10 family
-    if "O-9,46_wbaV" in O_list:#not sure should use and float(O9_wbaV)/float(num_1) > 0.1
+    if "O-9,46_wbaV" in O_list or "O-9,46_wbaV-from-II-9,12:z29:1,5-SRR1346254" in O_list:#not sure should use and float(O9_wbaV)/float(num_1) > 0.1
       if "O-9,46_wzy" in O_list:#and float(O946_wzy)/float(num_1) > 0.1
         O_choice="O-9,46"
         #print "$$$Most possilble Otype:  O-9,46"
@@ -734,6 +734,8 @@ def predict_O_and_H_types(Final_list,Final_list_passed):
   O_choice=""#no need to decide O contig for now, should be only one
   O_choice,O_nodes,special_gene_list,O_nodes_roles=decide_O_type_and_get_special_genes(Final_list,Final_list_passed)#decide the O antigen type and also return special-gene-list for further identification
   O_choice=O_choice.split("-")[-1].strip()
+  if O_choice=="1,3,19" and len(O_nodes_roles)==1 and "1,3,19" in O_nodes_roles[0][0]:
+    O_choice="-"
   H_contig_roles=decide_contig_roles_for_H_antigen(Final_list,Final_list_passed)#decide the H antigen contig is fliC or fljB
   log_file=open("SeqSero_log.txt","a")
   print("O_contigs:")
@@ -802,7 +804,7 @@ def get_kmer_dict(lib_dict,input_Ks):
   for h in lib_dict:
       score = (len(lib_dict[h] & input_Ks) / len(lib_dict[h])) * 100
       if score > 1:  # Arbitrary cut-off for similarity score very low but seems necessary to detect O-3,10 in some cases
-          if h.startswith('O-') and score > 10:
+          if h.startswith('O-') and score > 25:
               O_dict[h] = score
           if h.startswith('fl') and score > 40:
               H_dict[h] = score
@@ -820,7 +822,7 @@ def call_O_and_H_type(O_dict,H_dict,Special_dict,make_dir):
   else:
       for x in O_dict:
           log_file.write(x+"\t"+str(O_dict[x])+"\n")
-      if 'O-9,46_wbaV__1002' in O_dict:  # not sure should use and float(O9_wbaV)/float(num_1) > 0.1
+      if 'O-9,46_wbaV__1002' in O_dict or "O-9,46_wbaV-from-II-9,12:z29:1,5-SRR1346254__1002" in O_dict:  # not sure should use and float(O9_wbaV)/float(num_1) > 0.1
           if 'O-9,46_wzy__1191' in O_dict:  # and float(O946_wzy)/float(num_1) > 0.1
               highest_O = "O-9,46"
           elif "O-9,46,27_partial_wzy__1019" in O_dict:  # and float(O94627)/float(num_1) > 0.1
@@ -909,7 +911,7 @@ def map_and_sort(threads,database,fnameA,fnameB,sam,bam,for_sai,rev_sai,sorted_b
   subprocess.check_call("bwa index "+database+ " 2>> data_log.txt",shell=True)
   print("mapping...")
   if mapping_mode=="mem":
-    subprocess.check_call("bwa mem -t "+threads+" "+database+" "+fnameA+" "+fnameB+" > "+sam+ " 2>> data_log.txt",shell=True)
+    subprocess.check_call("bwa mem -k 17 -t "+threads+" "+database+" "+fnameA+" "+fnameB+" > "+sam+ " 2>> data_log.txt",shell=True)
   elif mapping_mode=="sam":
     if fnameB!="":
       subprocess.check_call("bwa aln -t "+threads+" "+database+" "+fnameA+" > "+for_sai+ " 2>> data_log.txt",shell=True)
@@ -1023,7 +1025,7 @@ def main():
         map_and_sort(threads,database,fnameA,fnameB,sam,bam,for_sai,rev_sai,sorted_bam,mapping_mode) #do mapping and sort
         xmlfile=extract_mapped_reads_and_do_assembly_and_blast(current_time,sorted_bam,combined_fq,mapped_fq1,mapped_fq2,threads,fnameA,fnameB,database,mapping_mode) #extract the mapped reads and do micro assembly and blast
         Final_list=xml_parse_score_comparision_seqsero(xmlfile) #analyze xml and get parsed results
-        Final_list_passed=[x for x in Final_list if float(x[0].split("_cov_")[1])>=3.5 and (x[1]>=int(x[0].split("__")[1]) or x[1]>=int(x[0].split("___")[1].split("_")[3]))]
+        Final_list_passed=[x for x in Final_list if float(x[0].split("_cov_")[1])>=1 and (x[1]>=int(x[0].split("__")[1]) or x[1]>=int(x[0].split("___")[1].split("_")[3]) or x[1]>1000)]
         O_choice,fliC_choice,fljB_choice,special_gene_list=predict_O_and_H_types(Final_list,Final_list_passed) #predict O, fliC and fljB
         subspecies=judge_subspecies(fnameA) #predict subspecies
         ###output
@@ -1033,6 +1035,8 @@ def main():
           make_dir="none-output-directory due to '-c' flag"
         else:
           new_file=open("Seqsero_result.txt","w")
+          if O_choice=="-":
+            O_choice=""
           new_file.write("Output_directory:"+make_dir+"\nInput files:\t"+for_fq+" "+rev_fq+"\n"+"O antigen prediction:\t"+"O-"+O_choice+"\n"+"H1 antigen prediction(fliC):\t"+fliC_choice+"\n"+"H2 antigen prediction(fljB):\t"+fljB_choice+"\n"+"Predicted antigenic profile:\t"+predict_form+"\n"+"Predicted subspecies:\t"+subspecies+"\n"+"Predicted serotype(s):\t"+predict_sero+star+"\n"+star+star_line+claim+"\n")#+##
           new_file.close()
           print("\n")
@@ -1054,6 +1058,8 @@ def main():
       O_dict,H_dict,Special_dict=get_kmer_dict(lib_dict,input_Ks)
       highest_O,highest_fliC,highest_fljB=call_O_and_H_type(O_dict,H_dict,Special_dict,make_dir)
       subspecies=judge_subspecies_Kmer(Special_dict)
+      if subspecies=="IIb" or subspecies=="IIa":
+        subspecies="II"
       predict_form,predict_sero,star,star_line,claim = seqsero_from_formula_to_serotypes(
           highest_O.split('-')[1], highest_fliC, highest_fljB, Special_dict,subspecies)
       if clean_mode:
