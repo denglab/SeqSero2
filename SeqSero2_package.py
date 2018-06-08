@@ -354,7 +354,7 @@ def seqsero_from_formula_to_serotypes(Otype, fliC, fljB, special_gene_list,subsp
         predict_sero = "Newport"
         star = "*"
         star_line = "Serotype Bardo shares the same antigenic profile with Newport, but Bardo is exceedingly rare."
-    claim = "The serotype(s) is/are the only serotype(s) with the indicated antigenic profile currently recognized in the Kauffmann White Scheme.  New serotypes can emerge and the possibility exists that this antigenic profile may emerge in a different subspecies.  Identification of strains to the subspecies level should accompany serotype determination; the same antigenic profile in different subspecies is considered different serotypes."
+    claim = "The serotype(s) is/are the only serotype(s) with the indicated antigenic profile currently recognized in the Kauffmann White Scheme.  New serotypes can emerge and the possibility exists that this antigenic profile may emerge in a different subspecies.  Identification of strains to the subspecies level should accompany serotype determination; the same antigenic profile in different subspecies is considered different serotypes.\n"
     if "N/A" in predict_sero:
         claim = ""
     #special test for Typhimurium
@@ -630,17 +630,18 @@ def decide_O_type_and_get_special_genes(Final_list,Final_list_passed):
     print("two differnt genes in same contig, fix it for O antigen")
     final_O.append(potenial_new_gene)
   ### end of the two genes on same contig test
+  final_O=sorted(final_O,key=lambda x: x[2], reverse=True)#sorted
   if len(final_O)==0:
     #print "$$$No Otype, due to no hit"#may need to be changed
     O_choice="-"
   else:
     O_list=[]
     for x in final_O:
-      O_list.append(x[0].split("__")[0])
       if not "O-1,3,19_not_in_3,10__130" in x[0]:#O-1,3,19_not_in_3,10 is too small, which may affect further analysis
+        O_list.append(x[0].split("__")[0])
         O_nodes_list.append(x[0].split("___")[1])
     ### special test for O9,46 and O3,10 family
-    if "O-9,46_wbaV" in O_list or "O-9,46_wbaV-from-II-9,12:z29:1,5-SRR1346254" in O_list:#not sure should use and float(O9_wbaV)/float(num_1) > 0.1
+    if ("O-9,46_wbaV" in O_list or "O-9,46_wbaV-from-II-9,12:z29:1,5-SRR1346254" in O_list) and O_list[0].startswith("O-9,"):#not sure should use and float(O9_wbaV)/float(num_1) > 0.1
       if "O-9,46_wzy" in O_list:#and float(O946_wzy)/float(num_1) > 0.1
         O_choice="O-9,46"
         #print "$$$Most possilble Otype:  O-9,46"
@@ -663,7 +664,7 @@ def decide_O_type_and_get_special_genes(Final_list,Final_list_passed):
         else:
           pass
           #print "$$$No suitable one, because can't distinct it's O-9 or O-2, but O-9 has a more possibility."
-    elif ("O-3,10_wzx" in O_list) and ("O-9,46_wzy" in O_list):#and float(O310_wzx)/float(num_1) > 0.1 and float(O946_wzy)/float(num_1) > 0.1
+    elif ("O-3,10_wzx" in O_list) and ("O-9,46_wzy" in O_list) and (O_list[0].startswith("O-3,10") or O_list[0].startswith("O-9,46_wzy")):#and float(O310_wzx)/float(num_1) > 0.1 and float(O946_wzy)/float(num_1) > 0.1
       if "O-3,10_not_in_1,3,19" in O_list:#and float(O310_no_1319)/float(num_1) > 0.1
         O_choice="O-3,10"
         #print "$$$Most possilble Otype:  O-3,10 (contain O-3,10_not_in_1,3,19)"
@@ -685,7 +686,16 @@ def decide_O_type_and_get_special_genes(Final_list,Final_list_passed):
         pass
         #print "$$$No suitable Otype, or failure of mapping (please check the quality of raw reads)"
   #print "O:",O_choice,O_nodes_list
-  return O_choice,O_nodes_list,special_genes,final_O
+  Otypes=[x.split("_")[0] for x in O_list if x!="O-1,3,19_not_in_3,10"]
+  Otypes_uniq,Otypes_fre=Uniq(Otypes)
+  contamination_O=""
+  if O_choice=="O-9,46,27" or O_choice=="O-3,10":
+    if len(Otypes_uniq)>2:
+      contamination_O="potential contamination from O antigen signals"
+  else:
+    if len(Otypes_uniq)>1:
+      contamination_O="potential contamination from O antigen signals"
+  return O_choice,O_nodes_list,special_genes,final_O,contamination_O
 ### End of SeqSero2 allele prediction and output
 
 def get_input_files(make_dir,input_file,data_type,dirpath):
@@ -732,7 +742,7 @@ def predict_O_and_H_types(Final_list,Final_list_passed):
   fliC_length=0 #can be changed to coverage in future
   fljB_length=0 #can be changed to coverage in future
   O_choice=""#no need to decide O contig for now, should be only one
-  O_choice,O_nodes,special_gene_list,O_nodes_roles=decide_O_type_and_get_special_genes(Final_list,Final_list_passed)#decide the O antigen type and also return special-gene-list for further identification
+  O_choice,O_nodes,special_gene_list,O_nodes_roles,contamination_O=decide_O_type_and_get_special_genes(Final_list,Final_list_passed)#decide the O antigen type and also return special-gene-list for further identification
   O_choice=O_choice.split("-")[-1].strip()
   if O_choice=="1,3,19" and len(O_nodes_roles)==1 and "1,3,19" in O_nodes_roles[0][0]:
     O_choice="-"
@@ -747,6 +757,8 @@ def predict_O_and_H_types(Final_list,Final_list_passed):
   print("H_contigs:")
   log_file.write("H_contigs:\n")
   H_contig_stat=[]
+  H1_cont_stat={}
+  H2_cont_stat={}
   for i in range(len(H_contig_roles)):
     x=H_contig_roles[i]
     a=0
@@ -762,13 +774,24 @@ def predict_O_and_H_types(Final_list,Final_list_passed):
         else:
           print(x[1],x[0],y[0].split("_")[1],"blast_score:",y[1],"identity%:",str(round(y[2]*100,2))+"%")
           log_file.write(x[1]+" "+x[0]+" "+y[0].split("_")[1]+" "+"blast_score: "+str(y[1])+" identity%:"+str(round(y[2]*100,2))+"%"+"\n")
+        if x[0]=="fliC":
+          if y[0].split("_")[1] not in H1_cont_stat:
+            H1_cont_stat[y[0].split("_")[1]]=y[2]
+          else:
+            H1_cont_stat[y[0].split("_")[1]]+=y[2]
+        if x[0]=="fljB":
+          if y[0].split("_")[1] not in H1_cont_stat:
+            H2_cont_stat[y[0].split("_")[1]]=y[2]
+          else:
+            H2_cont_stat[y[0].split("_")[1]]+=y[2]
         break
+  highest_H_coverage=max([float(x[1].split("_cov_")[-1]) for x in H_contig_roles]) #less than highest*0.1 would be regarded as contamination and noises, they will still be considered in contamination detection and logs, but not used as final serotype output
   for x in H_contig_roles:
     #if multiple choices, temporately select the one with longest length for now, will revise in further change
-    if "fliC" == x[0] and int(x[1].split("_")[3])>=fliC_length and x[1] not in O_nodes:#remember to avoid the effect of O-type contig, so should not in O_node list
+    if "fliC" == x[0] and int(x[1].split("_")[3])>=fliC_length and x[1] not in O_nodes and float(x[1].split("_cov_")[-1])>highest_H_coverage*0.1:#remember to avoid the effect of O-type contig, so should not in O_node list
       fliC_contig=x[1]
       fliC_length=int(x[1].split("_")[3])
-    elif "fljB" == x[0] and int(x[1].split("_")[3])>=fljB_length and x[1] not in O_nodes:
+    elif "fljB" == x[0] and int(x[1].split("_")[3])>=fljB_length and x[1] not in O_nodes and float(x[1].split("_cov_")[-1])>highest_H_coverage*0.1:
       fljB_contig=x[1]
       fljB_length=int(x[1].split("_")[3])
   for x in Final_list_passed:
@@ -778,8 +801,18 @@ def predict_O_and_H_types(Final_list,Final_list_passed):
       fljB_choice=x[0].split("_")[1]
     elif fliC_choice!="-" and fljB_choice!="-":
       break
+  #detect contaminations
+  #print(H1_cont_stat)
+  #print(H2_cont_stat)
+  H1_cont_stat_list=[x for x in H1_cont_stat if H1_cont_stat[x]>0.4]
+  H2_cont_stat_list=[x for x in H2_cont_stat if H2_cont_stat[x]>0.4]
+  contamination_H=""
+  if len(H1_cont_stat_list)>1 or len(H2_cont_stat_list)>1:
+    contamination_H="potential contamination from H antigen signals"
+  print(contamination_O)
+  print(contamination_H)
   log_file.close()
-  return O_choice,fliC_choice,fljB_choice,special_gene_list
+  return O_choice,fliC_choice,fljB_choice,special_gene_list,contamination_O,contamination_H
 
 def get_input_K(input_file,lib_dict,data_type,k_size):
   #kmer mode; get input_Ks from dict and data_type
@@ -822,7 +855,7 @@ def call_O_and_H_type(O_dict,H_dict,Special_dict,make_dir):
   else:
       for x in O_dict:
           log_file.write(x+"\t"+str(O_dict[x])+"\n")
-      if 'O-9,46_wbaV__1002' in O_dict or "O-9,46_wbaV-from-II-9,12:z29:1,5-SRR1346254__1002" in O_dict:  # not sure should use and float(O9_wbaV)/float(num_1) > 0.1
+      if ('O-9,46_wbaV__1002' in O_dict and O_dict['O-9,46_wbaV__1002']>70) or ("O-9,46_wbaV-from-II-9,12:z29:1,5-SRR1346254__1002" in O_dict and O_dict['O-9,46_wbaV-from-II-9,12:z29:1,5-SRR1346254__1002']>70):  # not sure should use and float(O9_wbaV)/float(num_1) > 0.1
           if 'O-9,46_wzy__1191' in O_dict:  # and float(O946_wzy)/float(num_1) > 0.1
               highest_O = "O-9,46"
           elif "O-9,46,27_partial_wzy__1019" in O_dict:  # and float(O94627)/float(num_1) > 0.1
@@ -866,6 +899,7 @@ def call_O_and_H_type(O_dict,H_dict,Special_dict,make_dir):
           except:
               pass
   #call_fliC:
+  highest_H_score_both_BC=H_dict[max(H_dict.keys(), key=(lambda k: H_dict[k]))] #used to detect whether fljB existed or not
   highest_fliC = '-'
   highest_fliC_raw = '-'
   highest_Score = 0
@@ -883,7 +917,7 @@ def call_O_and_H_type(O_dict,H_dict,Special_dict,make_dir):
   highest_Score = 0
   for s in H_dict:
       if s.startswith('fljB'):
-          if float(H_dict[s]) > highest_Score:
+          if float(H_dict[s]) > highest_Score and float(H_dict[s]) > highest_H_score_both_BC * 0.65: #fljB is special, so use highest_H_score_both_BC to give a general estimate of coverage, currently 0.65 seems pretty good; the reason use a high (0.65) is some fliC and fljB shared with each other
               highest_fljB = s.split('_')[1]
               highest_fljB_raw = s
               highest_Score = float(H_dict[s])
@@ -973,6 +1007,8 @@ def judge_subspecies(fnameA):
       max_score=float(salm_species_scores[i])
       max_score_index=i
   prediction=salm_species_results[max_score_index].split(".")[1].strip().split(" ")[0]
+  if float(out.split("\n")[1].split("\t")[4]) > float(out.split("\n")[1].split("\t")[5]): #bongori and enterica compare
+    prediction="bongori" #if not, the prediction would always be enterica, since they are located in the later part
   return prediction
 
 def judge_subspecies_Kmer(Special_dict):
@@ -984,6 +1020,9 @@ def judge_subspecies_Kmer(Special_dict):
       if max_score<float(Special_dict[x]):
         max_score=float(Special_dict[x])
         prediction=x.split("_")[-1].strip()
+      if x.split("_")[-1].strip()=="bongori" and float(Special_dict[x])>95:#if bongori already, then no need to test enterica
+        prediction="bongori"
+        break
   return prediction
 
 def main():
@@ -1026,10 +1065,17 @@ def main():
         xmlfile=extract_mapped_reads_and_do_assembly_and_blast(current_time,sorted_bam,combined_fq,mapped_fq1,mapped_fq2,threads,fnameA,fnameB,database,mapping_mode) #extract the mapped reads and do micro assembly and blast
         Final_list=xml_parse_score_comparision_seqsero(xmlfile) #analyze xml and get parsed results
         Final_list_passed=[x for x in Final_list if float(x[0].split("_cov_")[1])>=1 and (x[1]>=int(x[0].split("__")[1]) or x[1]>=int(x[0].split("___")[1].split("_")[3]) or x[1]>1000)]
-        O_choice,fliC_choice,fljB_choice,special_gene_list=predict_O_and_H_types(Final_list,Final_list_passed) #predict O, fliC and fljB
+        O_choice,fliC_choice,fljB_choice,special_gene_list,contamination_O,contamination_H=predict_O_and_H_types(Final_list,Final_list_passed) #predict O, fliC and fljB
         subspecies=judge_subspecies(fnameA) #predict subspecies
         ###output
         predict_form,predict_sero,star,star_line,claim=seqsero_from_formula_to_serotypes(O_choice,fliC_choice,fljB_choice,special_gene_list,subspecies)
+        contamination_report=""
+        if contamination_O!="" and contamination_H=="":
+          contamination_report="#detected potential contamination of mixed serotypes from O antigen signals"
+        elif contamination_O=="" and contamination_H!="":
+          contamination_report="#detected potential contamination of mixed serotypes or potential thrid H phase from H antigen signals"
+        elif contamination_O!="" and contamination_H!="":
+          contamination_report="#detected potential contamination of mixed serotypes from both O and H antigen signals"
         if clean_mode:
           subprocess.check_call("rm -rf ../"+make_dir,shell=True)
           make_dir="none-output-directory due to '-c' flag"
@@ -1037,12 +1083,12 @@ def main():
           new_file=open("Seqsero_result.txt","w")
           if O_choice=="-":
             O_choice=""
-          new_file.write("Output_directory:"+make_dir+"\nInput files:\t"+for_fq+" "+rev_fq+"\n"+"O antigen prediction:\t"+"O-"+O_choice+"\n"+"H1 antigen prediction(fliC):\t"+fliC_choice+"\n"+"H2 antigen prediction(fljB):\t"+fljB_choice+"\n"+"Predicted antigenic profile:\t"+predict_form+"\n"+"Predicted subspecies:\t"+subspecies+"\n"+"Predicted serotype(s):\t"+predict_sero+star+"\n"+star+star_line+claim+"\n")#+##
+          new_file.write("Output_directory:"+make_dir+"\nInput files:\t"+for_fq+" "+rev_fq+"\n"+"O antigen prediction:\t"+"O-"+O_choice+"\n"+"H1 antigen prediction(fliC):\t"+fliC_choice+"\n"+"H2 antigen prediction(fljB):\t"+fljB_choice+"\n"+"Predicted antigenic profile:\t"+predict_form+"\n"+"Predicted subspecies:\t"+subspecies+"\n"+"Predicted serotype(s):\t"+predict_sero+star+"\n"+star+star_line+claim+contamination_report+"\n")#+##
           new_file.close()
           print("\n")
           #subprocess.check_call("cat Seqsero_result.txt",shell=True)
           subprocess.call("rm H_and_O_and_specific_genes.fasta* *.sra *.bam *.sam *.fastq *.gz *.fq temp.txt *.xml "+fnameA+"*_db* 2> /dev/null",shell=True)
-        print("Output_directory:"+make_dir+"\nInput files:\t"+for_fq+" "+rev_fq+"\n"+"O antigen prediction:\t"+"O-"+O_choice+"\n"+"H1 antigen prediction(fliC):\t"+fliC_choice+"\n"+"H2 antigen prediction(fljB):\t"+fljB_choice+"\n"+"Predicted antigenic profile:\t"+predict_form+"\n"+"Predicted subspecies:\t"+subspecies+"\n"+"Predicted serotype(s):\t"+predict_sero+star+"\n"+star+star_line+claim+"\n")#+##
+        print("Output_directory:"+make_dir+"\nInput files:\t"+for_fq+" "+rev_fq+"\n"+"O antigen prediction:\t"+"O-"+O_choice+"\n"+"H1 antigen prediction(fliC):\t"+fliC_choice+"\n"+"H2 antigen prediction(fljB):\t"+fljB_choice+"\n"+"Predicted antigenic profile:\t"+predict_form+"\n"+"Predicted subspecies:\t"+subspecies+"\n"+"Predicted serotype(s):\t"+predict_sero+star+"\n"+star+star_line+claim+contamination_report+"\n")#+##
       else:
         print("Allele modes only support raw reads datatype, i.e. '-t 1 or 2 or 3'; please use '-m k'")
     elif analysis_mode=="k":

@@ -83,13 +83,28 @@ def get_salmid_invA_database(ex_dir):
     pass
   return invA_dict
 
+def get_salmid_rpoB_database(ex_dir):
+  # read invA kmer and return it
+  a = open(ex_dir + '/rpoB_mers_dict', 'rb')
+  rpoB_dict = pickle.load(a)
+  try:
+    del rpoB_dict['version']
+  except:
+    pass
+  return rpoB_dict
+
 def main():
   args = parse_args()
   ex_dir = os.path.dirname(os.path.realpath(__file__))
   lib_dict = multifasta_to_kmers_dict(ex_dir + '/H_and_O_and_specific_genes.fasta')
   invA_dict=get_salmid_invA_database(ex_dir)
+  #rpoB_dict=get_salmid_rpoB_database(ex_dir)
   lib_dict_new = lib_dict.copy()
+  #print(len(lib_dict_new))
   lib_dict_new.update(invA_dict)
+  #print(len(lib_dict_new))
+  #lib_dict_new.update(rpoB_dict)
+  #print(len(lib_dict_new))
   f = open(ex_dir + '/antigens.pickle', "wb")
   pickle.dump(lib_dict_new, f)
   f.close()
