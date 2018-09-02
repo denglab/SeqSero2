@@ -715,12 +715,17 @@ def decide_O_type_and_get_special_genes(Final_list,Final_list_passed):
   #Otypes=[x.split("_")[0] for x in O_list if x!="O-1,3,19_not_in_3,10"]
   Otypes_uniq,Otypes_fre=Uniq(Otypes)
   contamination_O=""
-  if O_choice=="O-9,46,27" or O_choice=="O-3,10":
+  if O_choice=="O-9,46,27" or O_choice=="O-3,10" or O_choice=="O-1,3,19":
     if len(Otypes_uniq)>2:
       contamination_O="potential contamination from O antigen signals"
   else:
     if len(Otypes_uniq)>1:
-      contamination_O="potential contamination from O antigen signals"
+      if O_choice=="O-4" and len(Otypes_uniq)==2 and "O-9,46,27" in Otypes_uniq: #for special 4,12,27 case such as Bredeney and Schwarzengrund
+        contamination_O=""
+      elif O_choice=="O-9,46" and len(Otypes_uniq)==2 and "O-9,46_wbaV" in Otypes_uniq and "O-9,46_wzy" in Otypes_uniq: #for special 4,12,27 case such as Bredeney and Schwarzengrund
+        contamination_O=""
+      else:
+        contamination_O="potential contamination from O antigen signals"
   return O_choice,O_nodes_list,special_genes,final_O,contamination_O
 ### End of SeqSero2 allele prediction and output
 
@@ -780,8 +785,8 @@ def predict_O_and_H_types(Final_list,Final_list_passed):
   log_file.write("O_contigs:\n")
   for x in O_nodes_roles:
     if "O-1,3,19_not_in_3,10" not in x[0]:#O-1,3,19_not_in_3,10 is just a small size marker
-      print(x[0].split("___")[-1],x[0].split("__")[0],"blast score:",x[1],"identity%:",str(round(x[2]*100,2))+"%")
-      log_file.write(x[0].split("___")[-1]+" "+x[0].split("__")[0]+" "+"blast score: "+str(x[1])+"identity%:"+str(round(x[2]*100,2))+"%"+"\n")
+      print(x[0].split("___")[-1],x[0].split("__")[0],"blast score:",x[1],"identity%:",str(round(x[2]*100,2))+"%",str(min(x[-1]))+" to "+str(max(x[-1])))
+      log_file.write(x[0].split("___")[-1]+" "+x[0].split("__")[0]+" "+"blast score: "+str(x[1])+"identity%:"+str(round(x[2]*100,2))+"% "+str(min(x[-1]))+" to "+str(max(x[-1]))+"\n")
   if len(H_contig_roles)!=0:
     highest_H_coverage=max([float(x[1].split("_cov_")[-1]) for x in H_contig_roles]) #less than highest*0.1 would be regarded as contamination and noises, they will still be considered in contamination detection and logs, but not used as final serotype output
   else:
@@ -795,7 +800,7 @@ def predict_O_and_H_types(Final_list,Final_list_passed):
       fljB_contig=x[1]
       fljB_length=int(x[1].split("_")[3])
   for x in Final_list_passed:
-    if fliC_choice=="-" and "fliC_" in x[0] and fliC_contig in x[0] :
+    if fliC_choice=="-" and "fliC_" in x[0] and fliC_contig in x[0]:
       fliC_choice=x[0].split("_")[1]
     elif fljB_choice=="-" and "fljB_" in x[0] and fljB_contig in x[0]:
       fljB_choice=x[0].split("_")[1]
@@ -817,30 +822,41 @@ def predict_O_and_H_types(Final_list,Final_list_passed):
       elif fljB_contig!="NA" and (fljB_contig == x[0].split("___")[-1]):
         fljB_region=x[3]
       else:
-        if x[1]>int(x[0].split("___")[1].split("_")[3]):
+        if x[1]*1.1>int(x[0].split("___")[1].split("_")[3]):#loose threshold by multiplying 1.1
           additional_contigs.append(x)
         #else:
           #print x[:3]
   #we can just use the fljB region (or fliC depends on size), no matter set() or contain a large locations (without middle part); however, if none of them is fully assembled, use 500 and 1200 as conservative cut-off
   if first_allele_percentage>0.9:
-    if len(fliC_region)>len(fljB_region):
+    if len(fliC_region)>len(fljB_region) and (max(fljB_region)-min(fljB_region))>1000:
       target_region=fljB_region|(fliC_region-set(range(min(fljB_region),max(fljB_region)))) #fljB_region|(fliC_region-set(range(min(fljB_region),max(fljB_region))))
-    elif len(fliC_region)<len(fljB_region):
+    elif len(fliC_region)<len(fljB_region) and (max(fliC_region)-min(fliC_region))>1000:
       target_region=fliC_region|(fljB_region-set(range(min(fliC_region),max(fliC_region))))  #fljB_region|(fliC_region-set(range(min(fljB_region),max(fljB_region))))
     else:
       target_region=set()#doesn't do anything
   else:
-    target_region=set(list(range(0,501))+list(range(1200,1700)))
+    target_region=set()#doesn't do anything
   #print(target_region)
   #print(additional_contigs)
+  target_region2=set(list(range(0,525))+list(range(1200,1700)))#I found to use 500 to 1200 as special region would be best
+  target_region=target_region2|target_region
   for x in additional_contigs:
+    removal=0
     contig_length=int(x[0].split("___")[1].split("length_")[-1].split("_")[0])
-    if fljB_contig not in x[0] and fliC_contig not in x[0] and len(target_region&x[3])/float(len(x[3]))>0.8 and contig_length*0.5<len(x[3])<contig_length*1.5: #consider length and alignment length for now, but very loose,0.5 and 1.5 as cut-off
+    if fljB_contig not in x[0] and fliC_contig not in x[0] and len(target_region&x[3])/float(len(x[3]))>0.65 and contig_length*0.5<len(x[3])<contig_length*1.5: #consider length and alignment length for now, but very loose,0.5 and 1.5 as cut-off
+      removal=1
+    else:
+      if first_allele_percentage > 0.9 and float(x[0].split("__")[1].split("___")[0])*x[2]/len(x[-1])>0.96:#if high similiarity with middle part of first allele (first allele >0.9, already cover middle part)
+        removal=1
+      else:
+        pass
+    if removal==1:
       for y in H_contig_roles:
         if y[1] in x[0]:
           H_contig_roles.remove(y)
     else:
-      print(x[:3],contig_length,len(target_region&x[3])/float(len(x[3])),contig_length*0.5,len(x[3]),contig_length*1.5)
+      pass
+      #print(x[:3],contig_length,len(target_region&x[3])/float(len(x[3])),contig_length*0.5,len(x[3]),contig_length*1.5)
   #end of removing none-middle contigs
   print("H_contigs:")
   log_file.write("H_contigs:\n")
@@ -855,13 +871,13 @@ def predict_O_and_H_types(Final_list,Final_list_passed):
         if "first" in y[0] or "last" in y[0]: #this is the final filter to decide it's fliC or fljB, if can't pass, then can't decide
           for y in Final_list_passed: #it's impossible to has the "first" and "last" allele as prediction, so re-do it
             if x[1] in y[0]:#it's very possible to be third phase allele, so no need to make it must be fliC or fljB
-              print(x[1],"can't_decide_fliC_or_fljB",y[0].split("_")[1],"blast_score:",y[1],"identity%:",str(round(y[2]*100,2))+"%")
-              log_file.write(x[1]+" "+x[0]+" "+y[0].split("_")[1]+" "+"blast_score: "+str(y[1])+" identity%:"+str(round(y[2]*100,2))+"%"+"\n")
+              print(x[1],"can't_decide_fliC_or_fljB",y[0].split("_")[1],"blast_score:",y[1],"identity%:",str(round(y[2]*100,2))+"%",str(min(y[-1]))+" to "+str(max(y[-1])))
+              log_file.write(x[1]+" "+x[0]+" "+y[0].split("_")[1]+" "+"blast_score: "+str(y[1])+" identity%:"+str(round(y[2]*100,2))+"% "+str(min(y[-1]))+" to "+str(max(y[-1]))+"\n")
               H_contig_roles[i]="can't decide fliC or fljB, may be third phase"
               break
         else:
-          print(x[1],x[0],y[0].split("_")[1],"blast_score:",y[1],"identity%:",str(round(y[2]*100,2))+"%")
-          log_file.write(x[1]+" "+x[0]+" "+y[0].split("_")[1]+" "+"blast_score: "+str(y[1])+" identity%:"+str(round(y[2]*100,2))+"%"+"\n")
+          print(x[1],x[0],y[0].split("_")[1],"blast_score:",y[1],"identity%:",str(round(y[2]*100,2))+"%",str(min(y[-1]))+" to "+str(max(y[-1])))
+          log_file.write(x[1]+" "+x[0]+" "+y[0].split("_")[1]+" "+"blast_score: "+str(y[1])+" identity%:"+str(round(y[2]*100,2))+"% "+str(min(y[-1]))+" to "+str(max(y[-1]))+"\n")
         if x[0]=="fliC":
           if y[0].split("_")[1] not in H1_cont_stat:
             H1_cont_stat[y[0].split("_")[1]]=y[2]
@@ -876,8 +892,8 @@ def predict_O_and_H_types(Final_list,Final_list_passed):
   #detect contaminations
   #print(H1_cont_stat)
   #print(H2_cont_stat)
-  H1_cont_stat_list=[x for x in H1_cont_stat if H1_cont_stat[x]>0.4]
-  H2_cont_stat_list=[x for x in H2_cont_stat if H2_cont_stat[x]>0.4]
+  H1_cont_stat_list=[x for x in H1_cont_stat if H1_cont_stat[x]>0.2]
+  H2_cont_stat_list=[x for x in H2_cont_stat if H2_cont_stat[x]>0.2]
   contamination_H=""
   if len(H1_cont_stat_list)>1 or len(H2_cont_stat_list)>1:
     contamination_H="potential contamination from H antigen signals"
@@ -1070,7 +1086,7 @@ def extract_mapped_reads_and_do_assembly_and_blast(current_time,sorted_bam,combi
     print("blasting...","\n")
     xmlfile="blasted_output.xml"#fnameA+"-extracted_vs_"+database+"_"+mapping_mode+".xml"
     subprocess.check_call('makeblastdb -in '+new_fasta+' -out '+new_fasta+'_db '+'-dbtype nucl >> data_log.txt 2>&1',shell=True) #temp.txt is to forbid the blast result interrupt the output of our program###1/27/2015
-    subprocess.check_call("blastn -word_size 10 -query "+database+" -db "+new_fasta+"_db -out "+xmlfile+" -outfmt 5 >> data_log.txt 2>&1",shell=True)###1/27/2015
+    subprocess.check_call("blastn -query "+database+" -db "+new_fasta+"_db -out "+xmlfile+" -outfmt 5 >> data_log.txt 2>&1",shell=True)###1/27/2015; 08272018, remove "-word_size 10"
   else:
     xmlfile="NA"
   return xmlfile
@@ -1158,7 +1174,7 @@ def main():
           for x in Final_list:
             file.write("\t".join(str(y) for y in x)+"\n")
           file.close()
-          Final_list_passed=[x for x in Final_list if float(x[0].split("_cov_")[1])>=1 and (x[1]>=int(x[0].split("__")[1]) or x[1]>=int(x[0].split("___")[1].split("_")[3]) or x[1]>1000)]
+          Final_list_passed=[x for x in Final_list if float(x[0].split("_cov_")[1])>=0.9 and (x[1]>=int(x[0].split("__")[1]) or x[1]>=int(x[0].split("___")[1].split("_")[3]) or x[1]>1000)]
           O_choice,fliC_choice,fljB_choice,special_gene_list,contamination_O,contamination_H=predict_O_and_H_types(Final_list,Final_list_passed) #predict O, fliC and fljB
         subspecies=judge_subspecies(fnameA) #predict subspecies
         ###output
