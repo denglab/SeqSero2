@@ -652,7 +652,12 @@ def decide_O_type_and_get_special_genes(Final_list,Final_list_passed):
   if potenial_new_gene!="":
     print("two differnt genes in same contig, fix it for O antigen")
     print(potenial_new_gene[:3])
-    final_O.append(potenial_new_gene)
+    pointer=0
+    for y in final_O:
+      if y[0].split("___")[-1]==potenial_new_gene[0].split("___")[-1]:
+        pointer=1
+    if pointer!=1:
+      final_O.append(potenial_new_gene)
   ### end of the two genes on same contig test
   final_O=sorted(final_O,key=lambda x: x[2], reverse=True)#sorted
   if len(final_O)==0 or (len(final_O)==1 and "O-1,3,19_not_in_3,10" in final_O[0][0]):
