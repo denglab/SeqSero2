@@ -345,10 +345,12 @@ def seqsero_from_formula_to_serotypes(Otype, fliC, fljB, special_gene_list,subsp
     star_line = ""
     if len(seronames) > 1:  #there are two possible predictions for serotypes
         star = "*"
-        star_line = "The predicted serotypes share the same general formula:\t" + Otype + ":" + fliC + ":" + fljB + "\n"
+        #changed 04072019
+        #star_line = "The predicted serotypes share the same general formula:\t" + Otype + ":" + fliC + ":" + fljB + "\n"
     if subspecies_pointer=="1" and len(seronames_none_subspecies)!=0:
       star="*"
-      star_line="The formula with this subspieces prediction can't get a serotype in KW manual, and the serotyping prediction was made without considering it."+star_line
+      star_line=" The predicted O and H antigens correspond to serotype '"+(" or ").join(seronames)+"' in the Kauffmann-White scheme. The predicted subspecies by SalmID (github.com/hcdenbakker/SalmID) may not be consistent with subspecies designation in the Kauffmann-White scheme." + star_line
+      #star_line="The formula with this subspieces prediction can't get a serotype in KW manual, and the serotyping prediction was made without considering it."+star_line
     if  Otype=="":
       Otype="-"
     predict_form = Otype + ":" + fliC + ":" + fljB
@@ -359,23 +361,30 @@ def seqsero_from_formula_to_serotypes(Otype, fliC, fljB, special_gene_list,subsp
         for x in special_gene_list:
             if x.startswith("sdf"):
                 sdf = "+"
-        predict_form = predict_form + " Sdf prediction:" + sdf
+                #star_line="Detected sdf gene, a marker to differentiate Gallinarum and Enteritidis"
+                star_line=" sdf gene detected." # ed_SL_04152019: new output format
+        #predict_form = predict_form + " Sdf prediction:" + sdf
+        predict_form = predict_form #changed 04072019
         if sdf == "-":
             star = "*"
-            star_line = "Additional characterization is necessary to assign a serotype to this strain.  Commonly circulating strains of serotype Enteritidis are sdf+, although sdf- strains of serotype Enteritidis are known to exist. Serotype Gallinarum is typically sdf- but should be quite rare. Sdf- strains of serotype Enteritidis and serotype Gallinarum can be differentiated by phenotypic profile or genetic criteria.\n"
-            predict_sero = "Gallinarum/Enteritidis sdf -"
+            #star_line="Didn't detected sdf gene, a marker to differentiate Gallinarum and Enteritidis"
+            star_line=" sdf gene not detected." # ed_SL_04152019: new output format
+            #changed in 04072019, for new output
+            #star_line = "Additional characterization is necessary to assign a serotype to this strain.  Commonly circulating strains of serotype Enteritidis are sdf+, although sdf- strains of serotype Enteritidis are known to exist. Serotype Gallinarum is typically sdf- but should be quite rare. Sdf- strains of serotype Enteritidis and serotype Gallinarum can be differentiated by phenotypic profile or genetic criteria.\n"
+            #predict_sero = "Gallinarum/Enteritidis" #04132019, for new output requirement
+            predict_sero = "Gallinarum or Enteritidis" # ed_SL_04152019: new output format
     ###end of special test for Enteritidis
     elif predict_form == "4:i:-":
-        predict_sero = "potential monophasic variant of Typhimurium"
+        predict_sero = "4:i:-"
     elif predict_form == "4:r:-":
-        predict_sero = "potential monophasic variant of Heidelberg"
+        predict_sero = "4:r:-"
     elif predict_form == "4:b:-":
-        predict_sero = "potential monophasic variant of Paratyphi B"
+        predict_sero = "4:b:-"
     #elif predict_form == "8:e,h:1,2": #removed after official merge of newport and bardo
         #predict_sero = "Newport"
         #star = "*"
         #star_line = "Serotype Bardo shares the same antigenic profile with Newport, but Bardo is exceedingly rare."
-    claim = "The serotype(s) is/are the only serotype(s) with the indicated antigenic profile currently recognized in the Kauffmann White Scheme.  New serotypes can emerge and the possibility exists that this antigenic profile may emerge in a different subspecies.  Identification of strains to the subspecies level should accompany serotype determination; the same antigenic profile in different subspecies is considered different serotypes.\n"
+    claim = " The serotype(s) is/are the only serotype(s) with the indicated antigenic profile currently recognized in the Kauffmann White Scheme. New serotypes can emerge and the possibility exists that this antigenic profile may emerge in a different subspecies.  Identification of strains to the subspecies level should accompany serotype determination; the same antigenic profile in different subspecies is considered different serotypes.\n"
     if "N/A" in predict_sero:
         claim = ""
     #special test for Typhimurium
@@ -390,9 +399,11 @@ def seqsero_from_formula_to_serotypes(Otype, fliC, fljB, special_gene_list,subsp
         if normal > mutation:
             pass
         elif normal < mutation:
-            predict_sero = predict_sero.strip() + "(O5-)"
+            #predict_sero = predict_sero.strip() + "(O5-)"
+            predict_sero = predict_sero.strip() #diable special sero for new output requirement, 04132019
             star = "*"
-            star_line = "Detected the deletion of O5-."
+            #star_line = "Detected the deletion of O5-."
+            star_line = " Detected a deletion that causes O5- variant of Typhimurium." # ed_SL_04152019: new output format
         else:
             pass
     #special test for Paratyphi B
@@ -406,16 +417,20 @@ def seqsero_from_formula_to_serotypes(Otype, fliC, fljB, special_gene_list,subsp
                 mutation = float(special_gene_list[x])
         #print(normal,mutation)
         if normal > mutation:
-            predict_sero = predict_sero.strip() + "(dt+)"
+            #predict_sero = predict_sero.strip() + "(dt+)" #diable special sero for new output requirement, 04132019
+            predict_sero = predict_sero.strip()+' var. L(+) tartrate+' if "Paratyphi B" in predict_sero else predict_sero.strip() # ed_SL_04152019: new output format
             star = "*"
-            star_line = "Didn't detect the SNP for dt- which means this isolate is a Paratyphi B variant L(+) tartrate(+)."
+            #star_line = "Didn't detect the SNP for dt- which means this isolate is a Paratyphi B variant L(+) tartrate(+)."
+            star_line = " The SNP that causes d-Tartrate nonfermentating phenotype was not detected. " # ed_SL_04152019: new output format
         elif normal < mutation:
-            predict_sero = predict_sero.strip() + "(dt-)"
+            #predict_sero = predict_sero.strip() + "(dt-)" #diable special sero for new output requirement, 04132019
+            predict_sero = predict_sero.strip()
             star = "*"
-            star_line = "Detected the SNP for dt- which means this isolate is a systemic pathovar of Paratyphi B."
+            #star_line = "Detected the SNP for dt- which means this isolate is a systemic pathovar of Paratyphi B."
+            star_line = " Detected the SNP for d-Tartrate nonfermenting phenotype." # ed_SL_04152019: new output format
         else:
             star = "*"
-            star_line = "Failed to detect the SNP for dt-, can't decide it's a Paratyphi B variant L(+) tartrate(+) or not."
+            star_line = " Failed to detect the SNP for dt-, can't decide it's a Paratyphi B variant L(+) tartrate(+) or not."
     #special test for O13,22 and O13,23
     if Otype=="13":
       ex_dir = os.path.dirname(os.path.realpath(__file__))
@@ -435,15 +450,17 @@ def seqsero_from_formula_to_serotypes(Otype, fliC, fljB, special_gene_list,subsp
           if predict_sero.split(" or ")[0] in z:
             if O22_score > O23_score:
               star = "*"
-              star_line = "Detected O22 specific genes to further differenciate '"+predict_sero+"'."
+              #star_line = "Detected O22 specific genes to further differenciate '"+predict_sero+"'." #diabled for new output requirement, 04132019
               predict_sero = z[0]
             elif O22_score < O23_score:
               star = "*"
-              star_line = "Detected O23 specific genes to further differenciate '"+predict_sero+"'."
+              #star_line = "Detected O23 specific genes to further differenciate '"+predict_sero+"'." #diabled for new output requirement, 04132019
               predict_sero = z[1]
             else:
               star = "*"
-              star_line = "Fail to detect O22 and O23 differences."
+              #star_line = "Fail to detect O22 and O23 differences." #diabled for new output requirement, 04132019
+    if " or " in predict_sero:
+      star_line = star_line + " The predicted serotypes share the same general formula:\t" + Otype + ":" + fliC + ":" + fljB + "\n"
     #special test for O6,8 
     #merge_O68_list=["Blockley","Bovismorbificans","Hadar","Litchfield","Manhattan","Muenchen"] #remove 11/11/2018, because already in merge list
     #for x in merge_O68_list:
@@ -787,14 +804,21 @@ def predict_O_and_H_types(Final_list,Final_list_passed,new_fasta):
   fljB_contig="NA"
   fliC_region=set([0])
   fljB_region=set([0,])
-  fliC_length=0 #can be changed to coverage in future
-  fljB_length=0 #can be changed to coverage in future
+  fliC_length=0 #can be changed to coverage in future; in 03292019, changed to ailgned length
+  fljB_length=0 #can be changed to coverage in future; in 03292019, changed to ailgned length
   O_choice="-"#no need to decide O contig for now, should be only one
   O_choice,O_nodes,special_gene_list,O_nodes_roles,contamination_O,Otypes_uniq=decide_O_type_and_get_special_genes(Final_list,Final_list_passed)#decide the O antigen type and also return special-gene-list for further identification
   O_choice=O_choice.split("-")[-1].strip()
   if (O_choice=="1,3,19" and len(O_nodes_roles)==1 and "1,3,19" in O_nodes_roles[0][0]) or O_choice=="":
     O_choice="-"
   H_contig_roles=decide_contig_roles_for_H_antigen(Final_list,Final_list_passed)#decide the H antigen contig is fliC or fljB
+  #add alignment locations, used for further selection, 03312019
+  for i in range(len(H_contig_roles)):
+    x=H_contig_roles[i]
+    for y in Final_list_passed:
+      if x[1] in y[0] and y[0].startswith(x[0]):
+        H_contig_roles[i]+=H_contig_roles[i]+(y[-1],)
+        break
   log_file=open("SeqSero_log.txt","a")
   extract_file=open("Extracted_antigen_alleles.fasta","a")
   handle_fasta=list(SeqIO.parse(new_fasta,"fasta"))
@@ -819,12 +843,12 @@ def predict_O_and_H_types(Final_list,Final_list_passed,new_fasta):
     highest_H_coverage=0
   for x in H_contig_roles:
     #if multiple choices, temporately select the one with longest length for now, will revise in further change
-    if "fliC" == x[0] and int(x[1].split("_")[3])>=fliC_length and x[1] not in O_nodes and float(x[1].split("_cov_")[-1])>highest_H_coverage*0.13:#remember to avoid the effect of O-type contig, so should not in O_node list
+    if "fliC" == x[0] and len(x[-1])>=fliC_length and x[1] not in O_nodes and float(x[1].split("_cov_")[-1])>highest_H_coverage*0.13:#remember to avoid the effect of O-type contig, so should not in O_node list
       fliC_contig=x[1]
-      fliC_length=int(x[1].split("_")[3])
-    elif "fljB" == x[0] and int(x[1].split("_")[3])>=fljB_length and x[1] not in O_nodes and float(x[1].split("_cov_")[-1])>highest_H_coverage*0.13:
+      fliC_length=len(x[-1])
+    elif "fljB" == x[0] and len(x[-1])>=fljB_length and x[1] not in O_nodes and float(x[1].split("_cov_")[-1])>highest_H_coverage*0.13:
       fljB_contig=x[1]
-      fljB_length=int(x[1].split("_")[3])
+      fljB_length=len(x[-1])
   for x in Final_list_passed:
     if fliC_choice=="-" and "fliC_" in x[0] and fliC_contig in x[0]:
       fliC_choice=x[0].split("_")[1]
@@ -1247,6 +1271,7 @@ def main():
         subspecies=judge_subspecies(fnameA) #predict subspecies
         ###output
         predict_form,predict_sero,star,star_line,claim=seqsero_from_formula_to_serotypes(O_choice,fliC_choice,fljB_choice,special_gene_list,subspecies)
+        claim="" #04132019, disable claim for new report requirement
         contamination_report=""
         H_list=["fliC_"+x for x in H1_cont_stat_list if len(x)>0]+["fljB_"+x for x in H2_cont_stat_list if len(x)>0]
         if contamination_O!="" and contamination_H=="":
@@ -1256,8 +1281,13 @@ def main():
         elif contamination_O!="" and contamination_H!="":
           contamination_report="#Potential inter-serotype contamination detected from both O and H antigen signals.All O-antigens detected:"+"\t".join(Otypes_uniq)+". All H-antigens detected:"+"\t".join(H_list)+"."
         if contamination_report!="":
-          contamination_report="potential inter-serotype contamination detected (please refer below antigen signal report for details)." #above contamination_reports are for back-up and bug fixing
-        claim="\n"+open("Extracted_antigen_alleles.fasta","r").read()#used to store H and O antigen sequeences
+          #contamination_report="potential inter-serotype contamination detected (please refer below antigen signal report for details)." #above contamination_reports are for back-up and bug fixing #web-based mode need to be re-used, 04132019
+          contamination_report="Co-existence of multiple serotypes detected, indicating potential inter-serotype contamination. See 'Extracted_antigen_alleles.fasta' for detected serotype determinant alleles."
+        #claim="\n"+open("Extracted_antigen_alleles.fasta","r").read()#used to store H and O antigen sequeences #04132019, need to change if using web-version
+        if contamination_report+star_line+claim=="": #0413, new output style
+          note=""
+        else:
+          note="Note:"
         if clean_mode:
           subprocess.check_call("rm -rf ../"+make_dir,shell=True)
           make_dir="none-output-directory due to '-c' flag"
@@ -1266,10 +1296,26 @@ def main():
           if O_choice=="":
             O_choice="-"
           if "N/A" not in predict_sero:
-            new_file.write("Output_directory:"+make_dir+"\nInput files:\t"+for_fq+" "+rev_fq+"\n"+"O antigen prediction:\t"+O_choice+"\n"+"H1 antigen prediction(fliC):\t"+fliC_choice+"\n"+"H2 antigen prediction(fljB):\t"+fljB_choice+"\n"+"Predicted antigenic profile:\t"+predict_form+"\n"+"Predicted subspecies:\t"+subspecies+"\n"+"Predicted serotype(s):\t"+predict_sero+"\nNote:"+contamination_report+star_line+claim+"\n")#+##
+            new_file.write("Output_directory:"+make_dir+"\n"+
+                           "Input files:\t"+for_fq+" "+rev_fq+"\n"+
+                           "O antigen prediction:\t"+O_choice+"\n"+
+                           "H1 antigen prediction(fliC):\t"+fliC_choice+"\n"+
+                           "H2 antigen prediction(fljB):\t"+fljB_choice+"\n"+
+                           "Predicted subspecies:\t"+subspecies+"\n"+
+                           "Predicted antigenic profile:\t"+predict_form+"\n"+
+                           "Predicted serotype:\t"+predict_sero+"\n"+ # ed_SL_04152019: change serotype(s) to serotype
+                           note+contamination_report+star_line+claim+"\n")#+##
           else:
-            star_line=star_line.strip()+"\tNone such antigenic formula in KW.\n"
-            new_file.write("Output_directory:"+make_dir+"\nInput files:\t"+for_fq+" "+rev_fq+"\n"+"O antigen prediction:\t"+O_choice+"\n"+"H1 antigen prediction(fliC):\t"+fliC_choice+"\n"+"H2 antigen prediction(fljB):\t"+fljB_choice+"\n"+"Predicted antigenic profile:\t"+predict_form+"\n"+"Predicted subspecies:\t"+subspecies+"\n"+"Note:"+contamination_report+star_line+claim+"\n")#+##
+            #star_line=star_line.strip()+"\tNone such antigenic formula in KW.\n"
+            star_line="" #04132019, for new output requirement, diable star_line if "NA" in output
+            new_file.write("Output_directory:"+make_dir+"\n"+
+                           "Input files:\t"+for_fq+" "+rev_fq+"\n"+
+                           "O antigen prediction:\t"+O_choice+"\n"+
+                           "H1 antigen prediction(fliC):\t"+fliC_choice+"\n"+
+                           "H2 antigen prediction(fljB):\t"+fljB_choice+"\n"+
+                           "Predicted subspecies:\t"+subspecies+"\n"+
+                           "Predicted antigenic profile:\t"+predict_form+"\n"+
+                           note+contamination_report+star_line+claim+"\n")#+##
           new_file.close()
           print("\n")
           #subprocess.check_call("cat Seqsero_result.txt",shell=True)
@@ -1277,9 +1323,24 @@ def main():
           subprocess.call("rm H_and_O_and_specific_genes.fasta* *.sra *.bam *.sam *.fastq *.gz *.fq temp.txt "+fnameA+"*_db* 2> /dev/null",shell=True)
         if "N/A" not in predict_sero:
           #print("Output_directory:"+make_dir+"\nInput files:\t"+for_fq+" "+rev_fq+"\n"+"O antigen prediction:\t"+O_choice+"\n"+"H1 antigen prediction(fliC):\t"+fliC_choice+"\n"+"H2 antigen prediction(fljB):\t"+fljB_choice+"\n"+"Predicted antigenic profile:\t"+predict_form+"\n"+"Predicted subspecies:\t"+subspecies+"\n"+"Predicted serotype(s):\t"+predict_sero+star+"\nNote:"+contamination_report+star+star_line+claim+"\n")#+##
-          print("Output_directory:"+make_dir+"\nInput files:\t"+for_fq+" "+rev_fq+"\n"+"O antigen prediction:\t"+O_choice+"\n"+"H1 antigen prediction(fliC):\t"+fliC_choice+"\n"+"H2 antigen prediction(fljB):\t"+fljB_choice+"\n"+"Predicted antigenic profile:\t"+predict_form+"\n"+"Predicted subspecies:\t"+subspecies+"\n"+"Predicted serotype(s):\t"+predict_sero+"\nNote:"+contamination_report+star_line+claim+"\n")#+##
+          print("Output_directory:"+make_dir+"\n"+
+                "Input files:\t"+for_fq+" "+rev_fq+"\n"+
+                "O antigen prediction:\t"+O_choice+"\n"+
+                "H1 antigen prediction(fliC):\t"+fliC_choice+"\n"+
+                "H2 antigen prediction(fljB):\t"+fljB_choice+"\n"+
+                "Predicted subspecies:\t"+subspecies+"\n"+
+                "Predicted antigenic profile:\t"+predict_form+"\n"+
+                "Predicted serotype:\t"+predict_sero+"\n"+ # ed_SL_04152019: change serotype(s) to serotype
+                note+contamination_report+star_line+claim+"\n")#+##
         else:
-          print("Output_directory:"+make_dir+"\nInput files:\t"+for_fq+" "+rev_fq+"\n"+"O antigen prediction:\t"+O_choice+"\n"+"H1 antigen prediction(fliC):\t"+fliC_choice+"\n"+"H2 antigen prediction(fljB):\t"+fljB_choice+"\n"+"Predicted antigenic profile:\t"+predict_form+"\n"+"Predicted subspecies:\t"+subspecies+"\n"+"Note:"+contamination_report+star_line+claim+"\n")
+          print("Output_directory:"+make_dir+"\n"+
+                "Input files:\t"+for_fq+" "+rev_fq+"\n"+
+                "O antigen prediction:\t"+O_choice+"\n"+
+                "H1 antigen prediction(fliC):\t"+fliC_choice+"\n"+
+                "H2 antigen prediction(fljB):\t"+fljB_choice+"\n"+
+                "Predicted subspecies:\t"+subspecies+"\n"+
+                "Predicted antigenic profile:\t"+predict_form+"\n"+
+                note+contamination_report+star_line+claim+"\n")
       else:
         print("Allele modes only support raw reads datatype, i.e. '-t 1 or 2 or 3'; please use '-m k'")
     elif analysis_mode=="k":
@@ -1299,7 +1360,11 @@ def main():
         subspecies="II"
       predict_form,predict_sero,star,star_line,claim = seqsero_from_formula_to_serotypes(
           highest_O.split('-')[1], highest_fliC, highest_fljB, Special_dict,subspecies)
-      claim=""
+      claim="" #no claim any more based on new output requirement
+      if star_line+claim=="": #0413, new output style
+        note=""
+      else:
+        note="Note:"
       if clean_mode:
         subprocess.check_call("rm -rf ../"+make_dir,shell=True)
         make_dir="none-output-directory due to '-c' flag"
@@ -1312,20 +1377,47 @@ def main():
         new_file=open("Seqsero_result.txt","w")
         #new_file.write("Output_directory:"+make_dir+"\nInput files:\t"+input_file+"\n"+"O antigen prediction:\t"+O_choice+"\n"+"H1 antigen prediction(fliC):\t"+highest_fliC+"\n"+"H2 antigen prediction(fljB):\t"+highest_fljB+"\n"+"Predicted antigenic profile:\t"+predict_form+"\n"+"Predicted subspecies:\t"+subspecies+"\n"+"Predicted serotype(s):\t"+predict_sero+star+"\n"+star+star_line+claim+"\n")#+##
         if "N/A" not in predict_sero:
-          if star_line+claim=="":
-            note=""
-          else:
-            note="Note:"
-          new_file.write("Output_directory:"+make_dir+"\nInput files:\t"+input_file+"\n"+"O antigen prediction:\t"+O_choice+"\n"+"H1 antigen prediction(fliC):\t"+highest_fliC+"\n"+"H2 antigen prediction(fljB):\t"+highest_fljB+"\n"+"Predicted antigenic profile:\t"+predict_form+"\n"+"Predicted subspecies:\t"+subspecies+"\n"+"Predicted serotype(s):\t"+predict_sero+star+"\n"+note+star_line+claim+"\n")#+##
+          new_file.write("Output_directory:"+make_dir+"\n"+
+                         "Input files:\t"+input_file+"\n"+
+                         "O antigen prediction:\t"+O_choice+"\n"+
+                         "H1 antigen prediction(fliC):\t"+highest_fliC+"\n"+
+                         "H2 antigen prediction(fljB):\t"+highest_fljB+"\n"+
+                         "Predicted subspecies:\t"+subspecies+"\n"+
+                         "Predicted antigenic profile:\t"+predict_form+"\n"+
+                         "Predicted serotype:\t"+predict_sero+"\n"+ # ed_SL_04152019: change serotype(s) to serotype
+                         note+star_line+claim+"\n")#+##
         else:
-          star_line=star_line.strip()+"\tNone such antigenic formula in KW.\n"
-          new_file.write("Output_directory:"+make_dir+"\nInput files:\t"+input_file+"\n"+"O antigen prediction:\t"+O_choice+"\n"+"H1 antigen prediction(fliC):\t"+highest_fliC+"\n"+"H2 antigen prediction(fljB):\t"+highest_fljB+"\n"+"Predicted antigenic profile:\t"+predict_form+"\n"+"Predicted subspecies:\t"+subspecies+"\nNote:"+star_line+claim+"\n")#+##
+          #star_line=star_line.strip()+"\tNone such antigenic formula in KW.\n"
+          star_line = "" #changed for new output requirement, 04132019
+          new_file.write("Output_directory:"+make_dir+"\n"+
+                         "Input files:\t"+input_file+"\n"+
+                         "O antigen prediction:\t"+O_choice+"\n"+
+                         "H1 antigen prediction(fliC):\t"+highest_fliC+"\n"+
+                         "H2 antigen prediction(fljB):\t"+highest_fljB+"\n"+
+                         "Predicted subspecies:\t"+subspecies+"\n"+
+                         "Predicted antigenic profile:\t"+predict_form+"\n"+
+                         note+star_line+claim+"\n")#+##
         new_file.close()
         subprocess.call("rm *.fasta* *.fastq *.gz *.fq temp.txt *.sra 2> /dev/null",shell=True)
       if "N/A" not in predict_sero:
-        print("Output_directory:"+make_dir+"\nInput files:\t"+input_file+"\n"+"O antigen prediction:\t"+O_choice+"\n"+"H1 antigen prediction(fliC):\t"+highest_fliC+"\n"+"H2 antigen prediction(fljB):\t"+highest_fljB+"\n"+"Predicted antigenic profile:\t"+predict_form+"\n"+"Predicted subspecies:\t"+subspecies+"\n"+"Predicted serotype(s):\t"+predict_sero+star+"\n"+note+star_line+claim+"\n")#+##
+        print("Output_directory:"+make_dir+"\n"+
+              "Input files:\t"+input_file+"\n"+
+              "O antigen prediction:\t"+O_choice+"\n"+
+              "H1 antigen prediction(fliC):\t"+highest_fliC+"\n"+
+              "H2 antigen prediction(fljB):\t"+highest_fljB+"\n"+
+              "Predicted subspecies:\t"+subspecies+"\n"+
+              "Predicted antigenic profile:\t"+predict_form+"\n"+
+              "Predicted serotype:\t"+predict_sero+"\n"+ # ed_SL_04152019: change serotype(s) to serotype
+              note+star_line+claim+"\n")#+##
       else:
-        print("Output_directory:"+make_dir+"\nInput files:\t"+input_file+"\n"+"O antigen prediction:\t"+O_choice+"\n"+"H1 antigen prediction(fliC):\t"+highest_fliC+"\n"+"H2 antigen prediction(fljB):\t"+highest_fljB+"\n"+"Predicted antigenic profile:\t"+predict_form+"\n"+"Predicted subspecies:\t"+subspecies+"\nNote:"+star_line+claim+"\n")#+##
+        print("Output_directory:"+make_dir+"\n"+
+              "Input files:\t"+input_file+"\n"+
+              "O antigen prediction:\t"+O_choice+"\n"+
+              "H1 antigen prediction(fliC):\t"+highest_fliC+"\n"+
+              "H2 antigen prediction(fljB):\t"+highest_fljB+"\n"+
+              "Predicted subspecies:\t"+subspecies+"\n"+
+              "Predicted antigenic profile:\t"+predict_form+"\n"+
+              note+star_line+claim+"\n")#+##
 
 if __name__ == '__main__':
   main()
