@@ -1,4 +1,4 @@
-# SeqSero2 alpha-test version
+# SeqSero2 V1.0.0
 Salmonella serotyping from genome sequencing data
 
 
