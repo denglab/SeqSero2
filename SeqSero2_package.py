@@ -18,9 +18,9 @@ def parse_args():
     parser = argparse.ArgumentParser(usage='SeqSero2_package.py -t <data_type> -m <mode> -i <input_data> [-p <number of threads>] [-b <BWA_algorithm>]\n\nDevelopper: Shaokang Zhang (zskzsk@uga.edu), Hendrik C Den-Bakker (Hendrik.DenBakker@uga.edu) and Xiangyu Deng (xdeng@uga.edu)\n\nContact email:seqsero@gmail.com')#add "-m <data_type>" in future
     parser.add_argument("-i",nargs="+",help="<string>: path/to/input_data")
     parser.add_argument("-t",choices=['1','2','3','4','5','6'],help="<int>: '1'(pair-end reads, interleaved),'2'(pair-end reads, seperated),'3'(single-end reads), '4'(assembly),'5'(nanopore fasta),'6'(nanopore fastq)")
-    parser.add_argument("-b",choices=['sam','mem'],default="mem",help="<string>: mode for mapping, 'sam'(bwa samse/sampe), 'mem'(bwa mem), default=mem") 
-    parser.add_argument("-p",default="1",help="<int>: threads used for mapping mode, if p>4, only 4 threads will be used for assembly, default=1") 
-    parser.add_argument("-m",choices=['k','a'],default="k",help="<string>: 'k'(kmer mode), 'a'(allele mode), default=k") 
+    parser.add_argument("-b",choices=['sam','mem'],default="mem",help="<string>: mode used for mapping in allele workflow, 'sam'(bwa samse/sampe), 'mem'(bwa mem), default=mem") 
+    parser.add_argument("-p",default="1",help="<int>: threads used for allele workflow, if p>4, only 4 threads will be used for assembly step, default=1") 
+    parser.add_argument("-m",choices=['k','a'],default="a",help="<string>: 'k'(kmer workflow), 'a'(allele workflow), default=a") 
     parser.add_argument("-d",help="<string>: output directory name, if not set, the output directory would be 'SeqSero_result_'+time stamp+one random number")
     parser.add_argument("-c",action="store_true",help="<flag>: if '-c' was flagged, SeqSero2 will use clean mode and only output serotyping prediction, the directory containing log files will be deleted")
     return parser.parse_args()
