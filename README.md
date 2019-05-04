@@ -62,16 +62,16 @@ Make sure all SeqSero2 and its dependency executables are added to your path (e.
 # Examples
 Allele mode:
 
-    	# Allele workflow ("-m a", default), for separated paired-end raw reads ("-t 2"), use 10 threads in mapping and assembly ("-p 10")
-	SeqSero2_package.py -p 10 -t 2 -i R1.fastq.gz R2.fastq.gz
+    # Allele workflow ("-m a", default), for separated paired-end raw reads ("-t 2"), use 10 threads in mapping and assembly ("-p 10")
+    SeqSero2_package.py -p 10 -t 2 -i R1.fastq.gz R2.fastq.gz
 	
 K-mer mode:
 
-    	# Raw reads k-mer ("-m k"), for separated paired-end raw reads ("-t 2")
-        SeqSero2_package.py -m k -t 2 -i R1.fastq.gz R2.fastq.gz
+    # Raw reads k-mer ("-m k"), for separated paired-end raw reads ("-t 2")
+    SeqSero2_package.py -m k -t 2 -i R1.fastq.gz R2.fastq.gz
 
-	# Genome assembly k-mer ("-t 4", genome assemblies only predicted by the k-mer workflow, "-m k")
-	SeqSero2_package.py -m k -t 4 -i assembly.fasta
+    # Genome assembly k-mer ("-t 4", genome assemblies only predicted by the k-mer workflow, "-m k")
+    SeqSero2_package.py -m k -t 4 -i assembly.fasta
 	
 # Output 
 Upon executing the command, a directory named 'SeqSero_result_Time_your_run' will be created. Your result will be stored in 'Seqsero_result.txt' in that directory. And the assembled alleles can also be found in the directory if using "-m a" (allele mode).
