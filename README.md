@@ -1,30 +1,19 @@
 # SeqSero2 V1.0.0
-Salmonella serotyping from genome sequencing data
-
+Salmonella serotype prediction from genome sequencing data
 
 # Introduction 
-SeqSero2 is a pipeline for Salmonella serotype determination from raw sequencing reads or genome assemblies
-
+SeqSero2 is a pipeline for Salmonella serotype prediction from raw sequencing reads or genome assemblies
 
 # Dependencies 
-SeqSero has two modes:
+SeqSero has three workflows:
 
+(A) Allele micro-assembly (default). This workflow takes raw reads as input and performs targeted assembly of serotype determinant alleles. Assembled alleles are used to predict serotype and flag potential inter-serotype contamination in sequencing data (i.e., presence of reads from multiple serotypes due to, for example, cross or carryover contamination during sequencing). 
 
-(A) k-mer based mode (default), which applies unique k-mers of serotype determinant alleles to determine Salmonella serotypes in a fast speed. Special thanks to Dr. Hendrik Den Bakker for his significant contribution to this mode, details can be found in [SeqSeroK](https://github.com/hcdenbakker/SeqSeroK) and [SalmID](https://github.com/hcdenbakker/SalmID).
-
-K-mer mode is a independant pipeline, it only requires:
+Allele micro-assembly workflow depends on:
 
 1. Python 3;
-2. [SRA Toolkit](http://www.ncbi.nlm.nih.gov/Traces/sra/sra.cgi?cmd=show&f=software&m=software&s=software) (optional, just used to fastq-dump sra files);
 
-
-(B) allele based mode (if users want to extract serotype determinant alleles), which applies a hybrid approach of reads-mapping and micro-assembly.
-
-Allele mode depends on:
-
-1. Python 3; 
-
-2. [Burrows-Wheeler Aligner](http://sourceforge.net/projects/bio-bwa/files/); 
+2. [Burrows-Wheeler Aligner](http://sourceforge.net/projects/bio-bwa/files/);
 
 3. [Samtools](http://sourceforge.net/projects/samtools/files/samtools/);
 
@@ -39,12 +28,23 @@ Allele mode depends on:
 8. [SalmID](https://github.com/hcdenbakker/SalmID).
 
 
+(B) Raw reads k-mer. This workflow takes raw reads as input and performs rapid serotype prediction based on unique k-mers of serotype determinants. 
+
+Raw reads k-mer workflow (originally SeqSeroK) depends on:
+
+1. Python 3;
+2. [SRA Toolkit](http://www.ncbi.nlm.nih.gov/Traces/sra/sra.cgi?cmd=show&f=software&m=software&s=software) (optional, just used to fastq-dump sra files);
+
+
+(C) Genome assembly k-mer. This workflow takes genome assemblies as input and the rest of the workflow largely overlaps with the raw reads k-mer workflow
+
+
 # Executing the code 
 Make sure all SeqSero2 and its dependency executables are added to your path (e.g. to ~/.bashrc). Then type SeqSero2_package.py to get detailed instructions.
 
     Usage: SeqSero2_package.py 
 
-    -m <string> (which mode to apply, 'k'(kmer mode), 'a'(allele mode), default=k)
+    -m <string> (which workflow to apply, 'a'(allele micro-assembly), 'k'(raw reads and genome assembly k-mer), default=a)
 
     -t <string> (input data type, '1' for interleaved paired-end reads, '2' for separated paired-end reads, '3' for single reads, '4' for genome assembly, '5' for nanopore fasta, '6'for nanopore fastq)
 
@@ -56,7 +56,7 @@ Make sure all SeqSero2 and its dependency executables are added to your path (e.
  
     -d <string> (output directory name, if not set, the output directory would be 'SeqSero_result_'+time stamp+one random number)
 	
-	-c <flag> (if '-c' was flagged, SeqSero2 will use clean mode and only output serotyping prediction without the directory containing log files)
+	-c <flag> (if '-c' was flagged, SeqSero2 will only output serotype prediction without the directory containing log files)
 	
 
 # Examples
