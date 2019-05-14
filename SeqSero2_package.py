@@ -681,14 +681,14 @@ def decide_O_type_and_get_special_genes(Final_list,Final_list_passed):
     #print "$$$No Otype, due to no hit"#may need to be changed
     O_choice="-"
   else:
-    highest_O_coverage=max([float(x[0].split("_cov_")[-1]) for x in final_O if "O-1,3,19_not_in_3,10" not in x[0]])
+    highest_O_coverage=max([float(x[0].split("_cov_")[-1].split("_")[0]) for x in final_O if "O-1,3,19_not_in_3,10" not in x[0]])
     O_list=[]
     O_list_less_contamination=[]
     for x in final_O:
       if not "O-1,3,19_not_in_3,10__130" in x[0]:#O-1,3,19_not_in_3,10 is too small, which may affect further analysis; to avoid contamination affect, use 0.15 of highest coverage as cut-off
         O_list.append(x[0].split("__")[0])
         O_nodes_list.append(x[0].split("___")[1])
-        if float(x[0].split("_cov_")[-1])>highest_O_coverage*0.15:
+        if float(x[0].split("_cov_")[-1].split("_")[0])>highest_O_coverage*0.15:
           O_list_less_contamination.append(x[0].split("__")[0])
     ### special test for O9,46 and O3,10 family
     if ("O-9,46_wbaV" in O_list or "O-9,46_wbaV-from-II-9,12:z29:1,5-SRR1346254" in O_list) and O_list_less_contamination[0].startswith("O-9,"):#not sure should use and float(O9_wbaV)/float(num_1) > 0.1
@@ -726,7 +726,7 @@ def decide_O_type_and_get_special_genes(Final_list,Final_list_passed):
       try: 
         max_score=0
         for x in final_O:
-          if x[2]>=max_score and float(x[0].split("_cov_")[-1])>highest_O_coverage*0.15:#use x[2],08172018, the "coverage identity = cover_length * identity"; also meet coverage threshold
+          if x[2]>=max_score and float(x[0].split("_cov_")[-1].split("_")[0])>highest_O_coverage*0.15:#use x[2],08172018, the "coverage identity = cover_length * identity"; also meet coverage threshold
             max_score=x[2]#change from x[-1] to x[2],08172018
             O_choice=x[0].split("_")[0]
         if O_choice=="O-1,3,19":
@@ -838,15 +838,15 @@ def predict_O_and_H_types(Final_list,Final_list_passed,new_fasta):
           seqs=str(z.seq)
       extract_file.write(title+seqs+"\n")
   if len(H_contig_roles)!=0:
-    highest_H_coverage=max([float(x[1].split("_cov_")[-1]) for x in H_contig_roles]) #less than highest*0.1 would be regarded as contamination and noises, they will still be considered in contamination detection and logs, but not used as final serotype output
+    highest_H_coverage=max([float(x[1].split("_cov_")[-1].split("_")[0]) for x in H_contig_roles]) #less than highest*0.1 would be regarded as contamination and noises, they will still be considered in contamination detection and logs, but not used as final serotype output
   else:
     highest_H_coverage=0
   for x in H_contig_roles:
     #if multiple choices, temporately select the one with longest length for now, will revise in further change
-    if "fliC" == x[0] and len(x[-1])>=fliC_length and x[1] not in O_nodes and float(x[1].split("_cov_")[-1])>highest_H_coverage*0.13:#remember to avoid the effect of O-type contig, so should not in O_node list
+    if "fliC" == x[0] and len(x[-1])>=fliC_length and x[1] not in O_nodes and float(x[1].split("_cov_")[-1].split("_")[0])>highest_H_coverage*0.13:#remember to avoid the effect of O-type contig, so should not in O_node list
       fliC_contig=x[1]
       fliC_length=len(x[-1])
-    elif "fljB" == x[0] and len(x[-1])>=fljB_length and x[1] not in O_nodes and float(x[1].split("_cov_")[-1])>highest_H_coverage*0.13:
+    elif "fljB" == x[0] and len(x[-1])>=fljB_length and x[1] not in O_nodes and float(x[1].split("_cov_")[-1].split("_")[0])>highest_H_coverage*0.13:
       fljB_contig=x[1]
       fljB_length=len(x[-1])
   for x in Final_list_passed:
@@ -1266,7 +1266,7 @@ def main():
           for x in Final_list:
             file.write("\t".join(str(y) for y in x)+"\n")
           file.close()
-          Final_list_passed=[x for x in Final_list if float(x[0].split("_cov_")[1])>=0.9 and (x[1]>=int(x[0].split("__")[1]) or x[1]>=int(x[0].split("___")[1].split("_")[3]) or x[1]>1000)]
+          Final_list_passed=[x for x in Final_list if float(x[0].split("_cov_")[1].split("_")[0])>=0.9 and (x[1]>=int(x[0].split("__")[1]) or x[1]>=int(x[0].split("___")[1].split("_")[3]) or x[1]>1000)]
           O_choice,fliC_choice,fljB_choice,special_gene_list,contamination_O,contamination_H,Otypes_uniq,H1_cont_stat_list,H2_cont_stat_list=predict_O_and_H_types(Final_list,Final_list_passed,new_fasta) #predict O, fliC and fljB
         subspecies=judge_subspecies(fnameA) #predict subspecies
         ###output
