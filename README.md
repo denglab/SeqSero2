@@ -13,19 +13,19 @@ Allele micro-assembly workflow depends on:
 
 1. Python 3;
 
-2. [Burrows-Wheeler Aligner](http://sourceforge.net/projects/bio-bwa/files/);
+2. [Burrows-Wheeler Aligner v0.7.12](http://sourceforge.net/projects/bio-bwa/files/);
 
-3. [Samtools](http://sourceforge.net/projects/samtools/files/samtools/);
+3. [Samtools v1.8](http://sourceforge.net/projects/samtools/files/samtools/);
 
-4. [NCBI BLAST](https://blast.ncbi.nlm.nih.gov/Blast.cgi?PAGE_TYPE=BlastDocs&DOC_TYPE=Download);
+4. [NCBI BLAST v2.2.28+](https://blast.ncbi.nlm.nih.gov/Blast.cgi?PAGE_TYPE=BlastDocs&DOC_TYPE=Download);
 
-5. [SRA Toolkit](http://www.ncbi.nlm.nih.gov/Traces/sra/sra.cgi?cmd=show&f=software&m=software&s=software);
+5. [SRA Toolkit v2.8.0](http://www.ncbi.nlm.nih.gov/Traces/sra/sra.cgi?cmd=show&f=software&m=software&s=software);
 
-6. [SPAdes](http://bioinf.spbau.ru/spades);
+6. [SPAdes v3.9.0](http://bioinf.spbau.ru/spades);
 
-7. [Bedtools](http://bedtools.readthedocs.io/en/latest/);
+7. [Bedtools v2.17.0](http://bedtools.readthedocs.io/en/latest/);
 
-8. [SalmID](https://github.com/hcdenbakker/SalmID).
+8. [SalmID v0.11](https://github.com/hcdenbakker/SalmID).
 
 
 (B) Raw reads k-mer. This workflow takes raw reads as input and performs rapid serotype prediction based on unique k-mers of serotype determinants. 
@@ -44,7 +44,7 @@ Make sure all SeqSero2 and its dependency executables are added to your path (e.
 
     Usage: SeqSero2_package.py 
 
-    -m <string> (which workflow to apply, 'a'(allele micro-assembly), 'k'(raw reads and genome assembly k-mer), default=a)
+    -m <string> (which workflow to apply, 'a'(raw reads allele micro-assembly), 'k'(raw reads and genome assembly k-mer), default=a)
 
     -t <string> (input data type, '1' for interleaved paired-end reads, '2' for separated paired-end reads, '3' for single reads, '4' for genome assembly, '5' for nanopore fasta, '6'for nanopore fastq)
 
