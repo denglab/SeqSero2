@@ -1,4 +1,4 @@
-# SeqSero2 V1.0.0
+# SeqSero2 v1.0.0
 Salmonella serotype prediction from genome sequencing data
 
 # Introduction 
