@@ -1297,7 +1297,7 @@ def main():
             O_choice="-"
           if "N/A" not in predict_sero:
             new_file.write("Output_directory:"+make_dir+"\n"+
-                           "Input files:\t"+for_fq+" "+rev_fq+"\n"+
+                           "Input files:\t"+"\t".join(input_file)+"\n"+
                            "O antigen prediction:\t"+O_choice+"\n"+
                            "H1 antigen prediction(fliC):\t"+fliC_choice+"\n"+
                            "H2 antigen prediction(fljB):\t"+fljB_choice+"\n"+
@@ -1309,7 +1309,7 @@ def main():
             #star_line=star_line.strip()+"\tNone such antigenic formula in KW.\n"
             star_line="" #04132019, for new output requirement, diable star_line if "NA" in output
             new_file.write("Output_directory:"+make_dir+"\n"+
-                           "Input files:\t"+for_fq+" "+rev_fq+"\n"+
+                           "Input files:\t"+"\t".join(input_file)+"\n"+
                            "O antigen prediction:\t"+O_choice+"\n"+
                            "H1 antigen prediction(fliC):\t"+fliC_choice+"\n"+
                            "H2 antigen prediction(fljB):\t"+fljB_choice+"\n"+
@@ -1324,7 +1324,7 @@ def main():
         if "N/A" not in predict_sero:
           #print("Output_directory:"+make_dir+"\nInput files:\t"+for_fq+" "+rev_fq+"\n"+"O antigen prediction:\t"+O_choice+"\n"+"H1 antigen prediction(fliC):\t"+fliC_choice+"\n"+"H2 antigen prediction(fljB):\t"+fljB_choice+"\n"+"Predicted antigenic profile:\t"+predict_form+"\n"+"Predicted subspecies:\t"+subspecies+"\n"+"Predicted serotype(s):\t"+predict_sero+star+"\nNote:"+contamination_report+star+star_line+claim+"\n")#+##
           print("Output_directory:"+make_dir+"\n"+
-                "Input files:\t"+for_fq+" "+rev_fq+"\n"+
+                "Input files:\t"+"\t".join(input_file)+"\n"+
                 "O antigen prediction:\t"+O_choice+"\n"+
                 "H1 antigen prediction(fliC):\t"+fliC_choice+"\n"+
                 "H2 antigen prediction(fljB):\t"+fljB_choice+"\n"+
@@ -1334,7 +1334,7 @@ def main():
                 note+contamination_report+star_line+claim+"\n")#+##
         else:
           print("Output_directory:"+make_dir+"\n"+
-                "Input files:\t"+for_fq+" "+rev_fq+"\n"+
+                "Input files:\t"+"\t".join(input_file)+"\n"+
                 "O antigen prediction:\t"+O_choice+"\n"+
                 "H1 antigen prediction(fliC):\t"+fliC_choice+"\n"+
                 "H2 antigen prediction(fljB):\t"+fljB_choice+"\n"+
