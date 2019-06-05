@@ -1156,6 +1156,8 @@ def map_and_sort(threads,database,fnameA,fnameB,sam,bam,for_sai,rev_sai,sorted_b
 def extract_mapped_reads_and_do_assembly_and_blast(current_time,sorted_bam,combined_fq,mapped_fq1,mapped_fq2,threads,fnameA,fnameB,database,mapping_mode):
   #seqsero2 -a; extract, assembly and blast
   subprocess.check_call("bamToFastq -i "+sorted_bam+" -fq "+combined_fq,shell=True)
+  #print("fnameA:",fnameA)
+  #print("fnameB:",fnameB)
   if fnameB!="":
     subprocess.check_call("bamToFastq -i "+sorted_bam+" -fq "+mapped_fq1+" -fq2 "+mapped_fq2 + " 2>> data_log.txt",shell=True)#2> /dev/null if want no output
   else:
@@ -1166,7 +1168,7 @@ def extract_mapped_reads_and_do_assembly_and_blast(current_time,sorted_bam,combi
     t="4"
   else:
     t=threads
-  if os.path.getsize(combined_fq)>100 and os.path.getsize(mapped_fq1)>100:#if not, then it's "-:-:-"
+  if os.path.getsize(combined_fq)>100 and (fnameB=="" or os.path.getsize(mapped_fq1)>100):#if not, then it's "-:-:-"
     if fnameB!="":
       subprocess.check_call("spades.py --careful --pe1-s "+combined_fq+" --pe1-1 "+mapped_fq1+" --pe1-2 "+mapped_fq2+" -t "+t+" -o "+outdir+ " >> data_log.txt 2>&1",shell=True)
     else:
