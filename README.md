@@ -58,9 +58,8 @@ Make sure all SeqSero2 and its dependency executables are added to your path (e.
 	
     -c <flag> (if '-c' was flagged, SeqSero2 will only output serotype prediction without the directory containing log files)
     
-    --check           <flag>: use '--check' flag to check the required
-                    dependencies
-    -v, --version     show program's version number and exit
+    --check <flag> (use '--check' flag to check the required dependencies)
+    -v, --version (show program's version number and exit)
 	
 
 # Examples
