@@ -11,19 +11,40 @@ import pickle
 import argparse
 import itertools
 from distutils.version import LooseVersion
+from distutils.spawn import find_executable
+
+try:
+    from .version import SeqSero2_version
+except Exception: #ImportError
+    from version import SeqSero2_version
 
 ### SeqSero Kmer
 def parse_args():
     "Parse the input arguments, use '-h' for help."
-    parser = argparse.ArgumentParser(usage='SeqSero2_package.py -t <data_type> -m <mode> -i <input_data> [-p <number of threads>] [-b <BWA_algorithm>]\n\nDevelopper: Shaokang Zhang (zskzsk@uga.edu), Hendrik C Den-Bakker (Hendrik.DenBakker@uga.edu) and Xiangyu Deng (xdeng@uga.edu)\n\nContact email:seqsero@gmail.com')#add "-m <data_type>" in future
-    parser.add_argument("-i",nargs="+",help="<string>: path/to/input_data")
-    parser.add_argument("-t",choices=['1','2','3','4','5','6'],help="<int>: '1'(pair-end reads, interleaved),'2'(pair-end reads, seperated),'3'(single-end reads), '4'(assembly),'5'(nanopore fasta),'6'(nanopore fastq)")
-    parser.add_argument("-b",choices=['sam','mem'],default="mem",help="<string>: mode used for mapping in allele workflow, 'sam'(bwa samse/sampe), 'mem'(bwa mem), default=mem") 
-    parser.add_argument("-p",default="1",help="<int>: threads used for allele workflow, if p>4, only 4 threads will be used for assembly step, default=1") 
-    parser.add_argument("-m",choices=['k','a'],default="a",help="<string>: 'k'(kmer workflow), 'a'(allele workflow), default=a") 
+    parser = argparse.ArgumentParser(usage='SeqSero2_package.py -t <data_type> -m <mode> -i <input_data> [-d <output_directory>] [-p <number of threads>] [-b <BWA_algorithm>]\n\nDevelopper: Shaokang Zhang (zskzsk@uga.edu), Hendrik C Den-Bakker (Hendrik.DenBakker@uga.edu) and Xiangyu Deng (xdeng@uga.edu)\n\nContact email:seqsero@gmail.com\n\nVersion: v1.0.0')#add "-m <data_type>" in future
+    parser.add_argument("-i",nargs="+",help="<string>: path/to/input_data",type=os.path.abspath)  ### ed_SL_05282019: add 'type=os.path.abspath' to generate absolute path of input data.
+    parser.add_argument("-t",choices=['1','2','3','4','5','6'],help="<int>: '1' for interleaved paired-end reads, '2' for separated paired-end reads, '3' for single reads, '4' for genome assembly, '5' for nanopore fasta, '6' for nanopore fastq")
+    parser.add_argument("-b",choices=['sam','mem'],default="mem",help="<string>: algorithms for bwa mapping for allele mode; 'mem' for mem, 'sam' for samse/sampe; default=mem; optional; for now we only optimized for default 'mem' mode")
+    parser.add_argument("-p",default="1",help="<int>: number of threads for allele mode, if p >4, only 4 threads will be used for assembly since the amount of extracted reads is small, default=1")
+    parser.add_argument("-m",choices=['k','a'],default="a",help="<string>: which workflow to apply, 'a'(raw reads allele micro-assembly), 'k'(raw reads and genome assembly k-mer), default=a")
     parser.add_argument("-d",help="<string>: output directory name, if not set, the output directory would be 'SeqSero_result_'+time stamp+one random number")
-    parser.add_argument("-c",action="store_true",help="<flag>: if '-c' was flagged, SeqSero2 will use clean mode and only output serotyping prediction, the directory containing log files will be deleted")
+    parser.add_argument("-c",action="store_true",help="<flag>: if '-c' was flagged, SeqSero2 will only output serotype prediction without the directory containing log files")
+    parser.add_argument("--check",action="store_true",help="<flag>: use '--check' flag to check the required dependencies")
+    parser.add_argument('-v', '--version', action='version', version='%(prog)s ' + SeqSero2_version)
     return parser.parse_args()
+
+### ed_SL_05282019: check paths of dependencies
+check_dependencies = parse_args().check
+dependencies = ['bwa','samtools','blastn','fastq-dump','spades.py','bedtools','SalmID.py']
+if check_dependencies:
+    for item in dependencies:
+        ext_path = find_executable(item)
+        if ext_path is not None:
+            print ("Using "+item+" - "+ext_path)
+        else:
+            print ("ERROR: can not find "+item+" in PATH")
+    sys.exit()
+### end of --check
 
 def reverse_complement(sequence):
     complement = {
@@ -430,7 +451,8 @@ def seqsero_from_formula_to_serotypes(Otype, fliC, fljB, special_gene_list,subsp
             star_line = " Detected the SNP for d-Tartrate nonfermenting phenotype." # ed_SL_04152019: new output format
         else:
             star = "*"
-            star_line = " Failed to detect the SNP for dt-, can't decide it's a Paratyphi B variant L(+) tartrate(+) or not."
+            #star_line = " Failed to detect the SNP for dt-, can't decide it's a Paratyphi B variant L(+) tartrate(+) or not."
+            star_line = " " ## ed_SL_05152019: do not report this situation.
     #special test for O13,22 and O13,23
     if Otype=="13":
       ex_dir = os.path.dirname(os.path.realpath(__file__))
@@ -1247,7 +1269,8 @@ def main():
     else:
       subprocess.check_call(["mkdir",make_dir])
     #subprocess.check_call("cp "+dirpath+"/"+database+" "+" ".join(input_file)+" "+make_dir,shell=True)
-    subprocess.check_call("ln -sr "+dirpath+"/"+database+" "+" ".join(input_file)+" "+make_dir,shell=True)
+    #subprocess.check_call("ln -sr "+dirpath+"/"+database+" "+" ".join(input_file)+" "+make_dir,shell=True)
+    subprocess.check_call("ln -f -s "+dirpath+"/"+database+" "+" ".join(input_file)+" "+make_dir,shell=True) ### ed_SL_05282019: use -f option to force the replacement of links, remove -r and use absolute path instead to avoid link issue (use 'type=os.path.abspath' in -i argument).
   ############################begin the real analysis 
     if analysis_mode=="a":
       if data_type in ["1","2","3"]:#use allele mode
@@ -1284,7 +1307,7 @@ def main():
           contamination_report="#Potential inter-serotype contamination detected from both O and H antigen signals.All O-antigens detected:"+"\t".join(Otypes_uniq)+". All H-antigens detected:"+"\t".join(H_list)+"."
         if contamination_report!="":
           #contamination_report="potential inter-serotype contamination detected (please refer below antigen signal report for details)." #above contamination_reports are for back-up and bug fixing #web-based mode need to be re-used, 04132019
-          contamination_report="Co-existence of multiple serotypes detected, indicating potential inter-serotype contamination. See 'Extracted_antigen_alleles.fasta' for detected serotype determinant alleles."
+          contamination_report=" Co-existence of multiple serotypes detected, indicating potential inter-serotype contamination. See 'Extracted_antigen_alleles.fasta' for detected serotype determinant alleles."
         #claim="\n"+open("Extracted_antigen_alleles.fasta","r").read()#used to store H and O antigen sequeences #04132019, need to change if using web-version
         if contamination_report+star_line+claim=="": #0413, new output style
           note=""
@@ -1294,11 +1317,11 @@ def main():
           subprocess.check_call("rm -rf ../"+make_dir,shell=True)
           make_dir="none-output-directory due to '-c' flag"
         else:
-          new_file=open("Seqsero_result.txt","w")
+          new_file=open("SeqSero_result.txt","w")
           if O_choice=="":
             O_choice="-"
           if "N/A" not in predict_sero:
-            new_file.write("Output_directory:"+make_dir+"\n"+
+            new_file.write("Output_directory:\t"+make_dir+"\n"+
                            "Input files:\t"+"\t".join(input_file)+"\n"+
                            "O antigen prediction:\t"+O_choice+"\n"+
                            "H1 antigen prediction(fliC):\t"+fliC_choice+"\n"+
@@ -1310,7 +1333,7 @@ def main():
           else:
             #star_line=star_line.strip()+"\tNone such antigenic formula in KW.\n"
             star_line="" #04132019, for new output requirement, diable star_line if "NA" in output
-            new_file.write("Output_directory:"+make_dir+"\n"+
+            new_file.write("Output_directory:\t"+make_dir+"\n"+
                            "Input files:\t"+"\t".join(input_file)+"\n"+
                            "O antigen prediction:\t"+O_choice+"\n"+
                            "H1 antigen prediction(fliC):\t"+fliC_choice+"\n"+
@@ -1325,7 +1348,7 @@ def main():
           subprocess.call("rm H_and_O_and_specific_genes.fasta* *.sra *.bam *.sam *.fastq *.gz *.fq temp.txt "+fnameA+"*_db* 2> /dev/null",shell=True)
         if "N/A" not in predict_sero:
           #print("Output_directory:"+make_dir+"\nInput files:\t"+for_fq+" "+rev_fq+"\n"+"O antigen prediction:\t"+O_choice+"\n"+"H1 antigen prediction(fliC):\t"+fliC_choice+"\n"+"H2 antigen prediction(fljB):\t"+fljB_choice+"\n"+"Predicted antigenic profile:\t"+predict_form+"\n"+"Predicted subspecies:\t"+subspecies+"\n"+"Predicted serotype(s):\t"+predict_sero+star+"\nNote:"+contamination_report+star+star_line+claim+"\n")#+##
-          print("Output_directory:"+make_dir+"\n"+
+          print("Output_directory:\t"+make_dir+"\n"+
                 "Input files:\t"+"\t".join(input_file)+"\n"+
                 "O antigen prediction:\t"+O_choice+"\n"+
                 "H1 antigen prediction(fliC):\t"+fliC_choice+"\n"+
@@ -1335,7 +1358,7 @@ def main():
                 "Predicted serotype:\t"+predict_sero+"\n"+ # ed_SL_04152019: change serotype(s) to serotype
                 note+contamination_report+star_line+claim+"\n")#+##
         else:
-          print("Output_directory:"+make_dir+"\n"+
+          print("Output_directory:\t"+make_dir+"\n"+
                 "Input files:\t"+"\t".join(input_file)+"\n"+
                 "O antigen prediction:\t"+O_choice+"\n"+
                 "H1 antigen prediction(fliC):\t"+fliC_choice+"\n"+
@@ -1370,16 +1393,22 @@ def main():
       if clean_mode:
         subprocess.check_call("rm -rf ../"+make_dir,shell=True)
         make_dir="none-output-directory due to '-c' flag"
+        ### ed_SL_05282019, fix the assignment issue of variable 'O_choice' using "-m k -c"
+        if highest_O.split('-')[-1]=="":
+          O_choice="-"
+        else:
+          O_choice=highest_O.split('-')[-1]
+        ###
       else:
         if highest_O.split('-')[-1]=="":
           O_choice="-"
         else:
           O_choice=highest_O.split('-')[-1]
         #print("Output_directory:"+make_dir+"\tInput_file:"+input_file+"\tPredicted subpecies:"+subspecies + '\tPredicted antigenic profile:' + predict_form + '\tPredicted serotype(s):' + predict_sero)
-        new_file=open("Seqsero_result.txt","w")
+        new_file=open("SeqSero_result.txt","w")
         #new_file.write("Output_directory:"+make_dir+"\nInput files:\t"+input_file+"\n"+"O antigen prediction:\t"+O_choice+"\n"+"H1 antigen prediction(fliC):\t"+highest_fliC+"\n"+"H2 antigen prediction(fljB):\t"+highest_fljB+"\n"+"Predicted antigenic profile:\t"+predict_form+"\n"+"Predicted subspecies:\t"+subspecies+"\n"+"Predicted serotype(s):\t"+predict_sero+star+"\n"+star+star_line+claim+"\n")#+##
         if "N/A" not in predict_sero:
-          new_file.write("Output_directory:"+make_dir+"\n"+
+          new_file.write("Output_directory:\t"+make_dir+"\n"+
                          "Input files:\t"+input_file+"\n"+
                          "O antigen prediction:\t"+O_choice+"\n"+
                          "H1 antigen prediction(fliC):\t"+highest_fliC+"\n"+
@@ -1391,7 +1420,7 @@ def main():
         else:
           #star_line=star_line.strip()+"\tNone such antigenic formula in KW.\n"
           star_line = "" #changed for new output requirement, 04132019
-          new_file.write("Output_directory:"+make_dir+"\n"+
+          new_file.write("Output_directory:\t"+make_dir+"\n"+
                          "Input files:\t"+input_file+"\n"+
                          "O antigen prediction:\t"+O_choice+"\n"+
                          "H1 antigen prediction(fliC):\t"+highest_fliC+"\n"+
@@ -1402,7 +1431,7 @@ def main():
         new_file.close()
         subprocess.call("rm *.fasta* *.fastq *.gz *.fq temp.txt *.sra 2> /dev/null",shell=True)
       if "N/A" not in predict_sero:
-        print("Output_directory:"+make_dir+"\n"+
+        print("Output_directory:\t"+make_dir+"\n"+
               "Input files:\t"+input_file+"\n"+
               "O antigen prediction:\t"+O_choice+"\n"+
               "H1 antigen prediction(fliC):\t"+highest_fliC+"\n"+
@@ -1412,7 +1441,7 @@ def main():
               "Predicted serotype:\t"+predict_sero+"\n"+ # ed_SL_04152019: change serotype(s) to serotype
               note+star_line+claim+"\n")#+##
       else:
-        print("Output_directory:"+make_dir+"\n"+
+        print("Output_directory:\t"+make_dir+"\n"+
               "Input files:\t"+input_file+"\n"+
               "O antigen prediction:\t"+O_choice+"\n"+
               "H1 antigen prediction(fliC):\t"+highest_fliC+"\n"+
