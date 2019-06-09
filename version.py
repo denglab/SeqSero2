@@ -1,1 +1,1 @@
-SeqSero2_version = 'v1.0.0'
+SeqSero2_version = 'v1.0.1'
