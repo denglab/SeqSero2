@@ -695,7 +695,7 @@ def decide_O_type_and_get_special_genes(Final_list,Final_list_passed):
     for y in final_O:
       if y[0].split("___")[-1]==potenial_new_gene[0].split("___")[-1]:
         pointer=1
-    if pointer!=1:
+    if pointer!=0: #changed to consider two genes in same contig
       final_O.append(potenial_new_gene)
   ### end of the two genes on same contig test
   final_O=sorted(final_O,key=lambda x: x[2], reverse=True)#sorted
