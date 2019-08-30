@@ -15,19 +15,21 @@ Allele micro-assembly workflow depends on:
 
 1. Python 3;
 
-2. [Burrows-Wheeler Aligner v0.7.12](http://sourceforge.net/projects/bio-bwa/files/);
+2. Biopython 1.73;
 
-3. [Samtools v1.8](http://sourceforge.net/projects/samtools/files/samtools/);
+3. [Burrows-Wheeler Aligner v0.7.12](http://sourceforge.net/projects/bio-bwa/files/);
 
-4. [NCBI BLAST v2.2.28+](https://blast.ncbi.nlm.nih.gov/Blast.cgi?PAGE_TYPE=BlastDocs&DOC_TYPE=Download);
+4. [Samtools v1.8](http://sourceforge.net/projects/samtools/files/samtools/);
 
-5. [SRA Toolkit v2.8.0](http://www.ncbi.nlm.nih.gov/Traces/sra/sra.cgi?cmd=show&f=software&m=software&s=software);
+5. [NCBI BLAST v2.2.28+](https://blast.ncbi.nlm.nih.gov/Blast.cgi?PAGE_TYPE=BlastDocs&DOC_TYPE=Download);
 
-6. [SPAdes v3.9.0](http://bioinf.spbau.ru/spades);
+6. [SRA Toolkit v2.8.0](http://www.ncbi.nlm.nih.gov/Traces/sra/sra.cgi?cmd=show&f=software&m=software&s=software);
 
-7. [Bedtools v2.17.0](http://bedtools.readthedocs.io/en/latest/);
+7. [SPAdes v3.9.0](http://bioinf.spbau.ru/spades);
 
-8. [SalmID v0.11](https://github.com/hcdenbakker/SalmID).
+8. [Bedtools v2.17.0](http://bedtools.readthedocs.io/en/latest/);
+
+9. [SalmID v0.11](https://github.com/hcdenbakker/SalmID).
 
 
 (B) Raw reads k-mer. This workflow takes raw reads as input and performs rapid serotype prediction based on unique k-mers of serotype determinants. 
