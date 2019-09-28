@@ -1,0 +1,10 @@
+include LICENSE
+include README.md
+include MANIFEST.in
+include version.py
+include setup.py
+include seqsero2_db/antigens.pickle
+include seqsero2_db/H_and_O_and_specific_genes.fasta
+include seqsero2_db/invA_mers_dict
+include seqsero2_db/special.pickle
+include bin/deinterleave_fastq.sh
