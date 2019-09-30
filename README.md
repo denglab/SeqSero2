@@ -55,9 +55,9 @@ git clone https://github.com/denglab/SeqSero2.git
 sudo python3 -m pip install .
 ```
 ### Other options
-Third party SeqSero2 installations (may not be the latest version of SeqSero2): 
-https://github.com/B-UMMI/docker-images/tree/master/seqsero2
-https://github.com/denglab/SeqSero2/issues/13. 
+Third party SeqSero2 installations (may not be the latest version of SeqSero2): \
+https://github.com/B-UMMI/docker-images/tree/master/seqsero2 \
+https://github.com/denglab/SeqSero2/issues/13 \
 
 
 # Executing the code 
