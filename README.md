@@ -99,7 +99,7 @@ K-mer mode:
     SeqSero2_package.py -m k -t 4 -i assembly.fasta
 	
 # Output 
-Upon executing the command, a directory named 'SeqSero_result_Time_your_run' will be created. Your result will be stored in 'Seqsero_result.txt' in that directory. And the assembled alleles can also be found in the directory if using "-m a" (allele mode).
+Upon executing the command, a directory named 'SeqSero_result_Time_your_run' will be created. Your result will be stored in 'SeqSero_result.txt' in that directory. And the assembled alleles can also be found in the directory if using "-m a" (allele mode).
 
 
 # Citation
