@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import sys
+sys.path.insert(1,"..")
 import time
 import random
 import os
@@ -1314,13 +1315,20 @@ def main():
           contamination_report="#Potential inter-serotype contamination detected from both O and H antigen signals.All O-antigens detected:"+"\t".join(Otypes_uniq)+". All H-antigens detected:"+"\t".join(H_list)+"."
         if contamination_report!="":
           #contamination_report="potential inter-serotype contamination detected (please refer below antigen signal report for details)." #above contamination_reports are for back-up and bug fixing #web-based mode need to be re-used, 04132019
-          contamination_report=" Co-existence of multiple serotypes detected, indicating potential inter-serotype contamination. See 'Extracted_antigen_alleles.fasta' for detected serotype determinant alleles."
+          #contamination_report=" Co-existence of multiple serotypes detected, indicating potential inter-serotype contamination. See 'Extracted_antigen_alleles.fasta' for detected serotype determinant alleles."
+          #web only, 06022019
+          #contamination_report="Co-existence of multiple serotypes detected, indicating potential inter-serotype contamination. See 'Extracted_antigen_alleles.fasta' for detected serotype determinant alleles."
+          contamination_report="Co-existence of multiple serotypes detected, indicating potential inter-serotype contamination. See below for detected serotype determinant alleles."
+          #end of web only
         #claim="\n"+open("Extracted_antigen_alleles.fasta","r").read()#used to store H and O antigen sequeences #04132019, need to change if using web-version
         ## ed_SL_09272019: change for new output format
         #if contamination_report+star_line+claim=="": #0413, new output style
         #  note=""
         #else:
         #  note="Note:"
+        #web only, 06022019
+        seq_content=open("Extracted_antigen_alleles.fasta","r").read()
+        #end of web only
         if clean_mode:
           subprocess.check_call("rm -rf ../"+make_dir,shell=True)
           make_dir="none-output-directory due to '-c' flag"
@@ -1337,7 +1345,8 @@ def main():
                            "Predicted subspecies:\t"+subspecies+"\n"+
                            "Predicted antigenic profile:\t"+predict_form+"\n"+
                            "Predicted serotype:\t"+predict_sero+"\n"+ # ed_SL_04152019: change serotype(s) to serotype
-                           note+contamination_report+star_line+claim+"\n")#+##
+                           note+contamination_report+star_line+claim+"\n"+
+                           seq_content)#+##
           else:
             #star_line=star_line.strip()+"\tNone such antigenic formula in KW.\n"
             star_line="" #04132019, for new output requirement, diable star_line if "NA" in output
@@ -1349,7 +1358,8 @@ def main():
                            "Predicted subspecies:\t"+subspecies+"\n"+
                            "Predicted antigenic profile:\t"+predict_form+"\n"+
                            "Predicted serotype:\t"+predict_form+"\n"+ # ed_SL_09242019: add serotype output for "N/A" prediction
-                           note+NA_note+contamination_report+star_line+claim+"\n")#+##
+                           note+NA_note+contamination_report+star_line+claim+"\n"+
+                           seq_content)#+##
           new_file.close()
           print("\n")
           #subprocess.check_call("cat Seqsero_result.txt",shell=True)
