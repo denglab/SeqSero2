@@ -52,12 +52,13 @@ conda install -c bioconda seqsero2=1.0.2
 To install the SeqSero2 git repository locally:
 ```
 git clone https://github.com/denglab/SeqSero2.git
+cd SeqSero2
 sudo python3 -m pip install .
 ```
 ### Other options
 Third party SeqSero2 installations (may not be the latest version of SeqSero2): \
 https://github.com/B-UMMI/docker-images/tree/master/seqsero2 \
-https://github.com/denglab/SeqSero2/issues/13 \
+https://github.com/denglab/SeqSero2/issues/13
 
 
 # Executing the code 
