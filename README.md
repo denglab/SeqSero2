@@ -7,7 +7,7 @@ Online version: http://www.denglab.info/SeqSero2
 SeqSero2 is a pipeline for Salmonella serotype prediction from raw sequencing reads or genome assemblies
 
 # Dependencies 
-SeqSero has three workflows:
+SeqSero2 has three workflows:
 
 (A) Allele micro-assembly (default). This workflow takes raw reads as input and performs targeted assembly of serotype determinant alleles. Assembled alleles are used to predict serotype and flag potential inter-serotype contamination in sequencing data (i.e., presence of reads from multiple serotypes due to, for example, cross or carryover contamination during sequencing). 
 
@@ -48,8 +48,8 @@ To install the latest SeqSero2 Conda package (recommended):
 ```
 conda install -c bioconda seqsero2=1.0.2
 ```
-### Github
-To install the SeqSero2 github package locally:
+### Git
+To install the SeqSero2 git repository locally:
 ```
 git clone https://github.com/denglab/SeqSero2.git
 sudo python3 -m pip install .
