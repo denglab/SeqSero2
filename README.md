@@ -42,8 +42,11 @@ Raw reads k-mer workflow (originally SeqSeroK) depends on:
 
 (C) Genome assembly k-mer. This workflow takes genome assemblies as input and the rest of the workflow largely overlaps with the raw reads k-mer workflow
 
+To install SeqSero2 Conda package:  
 
-A Docker image of SeqSero2 can be found at https://github.com/B-UMMI/docker-images/tree/master/seqsero2. A Conda package of SeqSero2 is available as described at https://github.com/denglab/SeqSero2/issues/13. 
+Third party SeqSero2 installations (may not be the latest version of SeqSero2): 
+https://github.com/B-UMMI/docker-images/tree/master/seqsero2
+https://github.com/denglab/SeqSero2/issues/13. 
 
 
 # Executing the code 
