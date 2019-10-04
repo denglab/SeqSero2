@@ -53,7 +53,7 @@ To install the SeqSero2 git repository locally:
 ```
 git clone https://github.com/denglab/SeqSero2.git
 cd SeqSero2
-sudo python3 -m pip install .
+python3 -m pip install --user .
 ```
 ### Other options
 Third party SeqSero2 installations (may not be the latest version of SeqSero2): \
