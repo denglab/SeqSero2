@@ -715,7 +715,7 @@ def decide_O_type_and_get_special_genes(Final_list,Final_list_passed):
           O_list_less_contamination.append(x[0].split("__")[0])
     ### special test for O9,46 and O3,10 family
     if ("O-9,46_wbaV" in O_list or "O-9,46_wbaV-from-II-9,12:z29:1,5-SRR1346254" in O_list) and O_list_less_contamination[0].startswith("O-9,"):#not sure should use and float(O9_wbaV)/float(num_1) > 0.1
-      if "O-9,46_wzy" in O_list:#and float(O946_wzy)/float(num_1) > 0.1
+      if "O-9,46_wzy" in O_list or "O-9,46_wzy_partial" in O_list:#and float(O946_wzy)/float(num_1) > 0.1
         O_choice="O-9,46"
         #print "$$$Most possilble Otype:  O-9,46"
       elif "O-9,46,27_partial_wzy" in O_list:#and float(O94627)/float(num_1) > 0.1
@@ -1063,7 +1063,7 @@ def call_O_and_H_type(O_dict,H_dict,Special_dict,make_dir):
       for x in O_dict:
           log_file.write(x+"\t"+str(O_dict[x])+"\n")
       if ('O-9,46_wbaV__1002' in O_dict and O_dict['O-9,46_wbaV__1002']>70) or ("O-9,46_wbaV-from-II-9,12:z29:1,5-SRR1346254__1002" in O_dict and O_dict['O-9,46_wbaV-from-II-9,12:z29:1,5-SRR1346254__1002']>70):  # not sure should use and float(O9_wbaV)/float(num_1) > 0.1
-          if 'O-9,46_wzy__1191' in O_dict:  # and float(O946_wzy)/float(num_1) > 0.1
+          if 'O-9,46_wzy__1191' in O_dict or "O-9,46_wzy_partial__216" in O_dict:  # and float(O946_wzy)/float(num_1) > 0.1
               highest_O = "O-9,46"
           elif "O-9,46,27_partial_wzy__1019" in O_dict:  # and float(O94627)/float(num_1) > 0.1
               highest_O = "O-9,46,27"
