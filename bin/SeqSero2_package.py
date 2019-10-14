@@ -12,6 +12,7 @@ import argparse
 import itertools
 from distutils.version import LooseVersion
 from distutils.spawn import find_executable
+sys.path.insert(1,sys.path[0]+'/..')
 
 try:
     from .version import SeqSero2_version
