@@ -22,7 +22,7 @@ except Exception: #ImportError
 ### SeqSero Kmer
 def parse_args():
     "Parse the input arguments, use '-h' for help."
-    parser = argparse.ArgumentParser(usage='SeqSero2_package.py -t <data_type> -m <mode> -i <input_data> [-d <output_directory>] [-p <number of threads>] [-b <BWA_algorithm>]\n\nDevelopper: Shaokang Zhang (zskzsk@uga.edu), Hendrik C Den-Bakker (Hendrik.DenBakker@uga.edu) and Xiangyu Deng (xdeng@uga.edu)\n\nContact email:seqsero@gmail.com\n\nVersion: v1.0.2')#add "-m <data_type>" in future
+    parser = argparse.ArgumentParser(usage='SeqSero2_package.py -t <data_type> -m <mode> -i <input_data> [-d <output_directory>] [-p <number of threads>] [-b <BWA_algorithm>]\n\nDevelopper: Shaokang Zhang (zskzsk@uga.edu), Hendrik C Den-Bakker (Hendrik.DenBakker@uga.edu) and Xiangyu Deng (xdeng@uga.edu)\n\nContact email:seqsero@gmail.com\n\nVersion: v1.0.3.1')#add "-m <data_type>" in future
     parser.add_argument("-i",nargs="+",help="<string>: path/to/input_data",type=os.path.abspath)  ### ed_SL_05282019: add 'type=os.path.abspath' to generate absolute path of input data.
     parser.add_argument("-t",choices=['1','2','3','4','5','6'],help="<int>: '1' for interleaved paired-end reads, '2' for separated paired-end reads, '3' for single reads, '4' for genome assembly, '5' for nanopore fasta, '6' for nanopore fastq")
     parser.add_argument("-b",choices=['sam','mem'],default="mem",help="<string>: algorithms for bwa mapping for allele mode; 'mem' for mem, 'sam' for samse/sampe; default=mem; optional; for now we only optimized for default 'mem' mode")
@@ -1197,8 +1197,8 @@ def extract_mapped_reads_and_do_assembly_and_blast(current_time,sorted_bam,combi
       subprocess.check_call("spades.py --careful --pe1-s "+combined_fq+" --pe1-1 "+mapped_fq1+" --pe1-2 "+mapped_fq2+" -t "+t+" -o "+outdir+ " >> data_log.txt 2>&1",shell=True)
     else:
       subprocess.check_call("spades.py --careful --pe1-s "+combined_fq+" -t "+t+" -o "+outdir+ " >> data_log.txt 2>&1",shell=True)
-    #new_fasta=fnameA+"_"+database+"_"+mapping_mode+".fasta"
-    new_fasta=fnameA+"_"+database.split('/')[-1]+"_"+mapping_mode+".fasta" # ed_SL_09152019: change path to databse for packaging
+    new_fasta=fnameA+"_"+database+"_"+mapping_mode+".fasta"
+    #new_fasta=fnameA+"_"+database.split('/')[-1]+"_"+mapping_mode+".fasta" # ed_SL_09152019: change path to databse for packaging
     subprocess.check_call("mv "+outdir+"/contigs.fasta "+new_fasta+ " 2> /dev/null",shell=True)
     #os.system("mv "+outdir+"/scaffolds.fasta "+new_fasta+ " 2> /dev/null") contigs.fasta
     subprocess.check_call("rm -rf "+outdir+ " 2> /dev/null",shell=True)
@@ -1258,10 +1258,10 @@ def main():
   make_dir=args.d
   clean_mode=args.c
   k_size=27 #will change for bug fixing
-  #database="H_and_O_and_specific_genes.fasta"
   dirpath = os.path.abspath(os.path.dirname(os.path.realpath(__file__)))
   ex_dir = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)),'seqsero2_db')) # ed_SL_09152019: add ex_dir for packaging
-  database=ex_dir+"/H_and_O_and_specific_genes.fasta" # ed_SL_09152019: change path to database for packaging
+  seqsero2_db=ex_dir+"/H_and_O_and_specific_genes.fasta" # ed_SL_11092019: change path to database for packaging
+  database="H_and_O_and_specific_genes.fasta"
   note="Note:"
   NA_note=" This predicted serotype is not in the Kauffman-White scheme." # ed_SL_09272019: add for new output format
   if len(sys.argv)==1:
@@ -1277,7 +1277,7 @@ def main():
       subprocess.check_call(["mkdir",make_dir])
     #subprocess.check_call("cp "+dirpath+"/"+database+" "+" ".join(input_file)+" "+make_dir,shell=True)
     #subprocess.check_call("ln -sr "+dirpath+"/"+database+" "+" ".join(input_file)+" "+make_dir,shell=True)
-    subprocess.check_call("ln -f -s "+database+" "+" ".join(input_file)+" "+make_dir,shell=True) # ed_SL_09152019: change path to database for packaging 
+    subprocess.check_call("ln -f -s "+seqsero2_db+" "+" ".join(input_file)+" "+make_dir,shell=True) # ed_SL_11092019: change path to database for packaging 
     #subprocess.check_call("ln -f -s "+dirpath+"/"+database+" "+" ".join(input_file)+" "+make_dir,shell=True) ### ed_SL_05282019: use -f option to force the replacement of links, remove -r and use absolute path instead to avoid link issue (use 'type=os.path.abspath' in -i argument).
   ############################begin the real analysis 
     if analysis_mode=="a":
