@@ -1064,7 +1064,7 @@ def call_O_and_H_type(O_dict,H_dict,Special_dict,make_dir):
       for x in O_dict:
           log_file.write(x+"\t"+str(O_dict[x])+"\n")
       if ('O-9,46_wbaV__1002' in O_dict and O_dict['O-9,46_wbaV__1002']>70) or ("O-9,46_wbaV-from-II-9,12:z29:1,5-SRR1346254__1002" in O_dict and O_dict['O-9,46_wbaV-from-II-9,12:z29:1,5-SRR1346254__1002']>70):  # not sure should use and float(O9_wbaV)/float(num_1) > 0.1
-          if 'O-9,46_wzy__1191' in O_dict or "O-9,46_wzy_partial__216" in O_dict:  # and float(O946_wzy)/float(num_1) > 0.1
+          if ('O-9,46_wzy__1191' in O_dict and O_dict['O-9,46_wzy__1191']>40) or ("O-9,46_wzy_partial__216" in O_dict and O_dict["O-9,46_wzy_partial__216"]>40):  # and float(O946_wzy)/float(num_1) > 0.1
               highest_O = "O-9,46"
           elif "O-9,46,27_partial_wzy__1019" in O_dict:  # and float(O94627)/float(num_1) > 0.1
               highest_O = "O-9,46,27"
@@ -1129,9 +1129,10 @@ def call_O_and_H_type(O_dict,H_dict,Special_dict,make_dir):
   for s in H_dict:
       if s.startswith('fljB'):
           if float(H_dict[s]) > highest_Score and float(H_dict[s]) > highest_H_score_both_BC * 0.65: #fljB is special, so use highest_H_score_both_BC to give a general estimate of coverage, currently 0.65 seems pretty good; the reason use a high (0.65) is some fliC and fljB shared with each other
-              highest_fljB = s.split('_')[1]
-              highest_fljB_raw = s
-              highest_Score = float(H_dict[s])
+              if s.split('_')[1]!=highest_fliC:
+                  highest_fljB = s.split('_')[1]
+                  highest_fljB_raw = s
+                  highest_Score = float(H_dict[s])
   log_file.write("\nSpecial_scores:\n")
   for s in Special_dict:
     log_file.write(s+"\t"+str(Special_dict[s])+"\n")
