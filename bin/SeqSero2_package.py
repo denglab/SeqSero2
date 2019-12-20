@@ -1099,7 +1099,12 @@ def call_O_and_H_type(O_dict,H_dict,Special_dict,make_dir):
               for x in O_dict:
                   if float(O_dict[x]) >= max_score:
                       max_score = float(O_dict[x])
-                      highest_O = x.split("_")[0]
+                      #highest_O = x.split("_")[0]
+                      # ed_SL_12182019: modified to fix the O-9,46 error example1
+                      if (x == 'O-9,46_wbaV__1002' or x == 'O-9,46_wbaV-from-II-9,12:z29:1,5-SRR1346254__1002') and ('O-9,46_wzy__1191' not in O_dict and 'O-9,46_wzy_partial__216' not in O_dict):
+                          highest_O = "O-9"
+                      else:
+                          highest_O = x.split("_")[0]
               if highest_O == "O-1,3,19":
                   highest_O = '-'
                   max_score = 0
@@ -1111,7 +1116,7 @@ def call_O_and_H_type(O_dict,H_dict,Special_dict,make_dir):
                               max_score = float(O_dict[x])
                               #highest_O = x.split("_")[0]
                               # ed_SL_12182019: modified to fix the O-9,46 error example1
-                              if x == 'O-9,46_wbaV__1002' or x == 'O-9,46_wbaV-from-II-9,12:z29:1,5-SRR1346254__1002':
+                              if (x == 'O-9,46_wbaV__1002' or x == 'O-9,46_wbaV-from-II-9,12:z29:1,5-SRR1346254__1002') and ('O-9,46_wzy__1191' not in O_dict and 'O-9,46_wzy_partial__216' not in O_dict):
                                   highest_O = "O-9"
                               else:
                                   highest_O = x.split("_")[0]
