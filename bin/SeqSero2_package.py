@@ -22,19 +22,20 @@ except Exception: #ImportError
 ### SeqSero Kmer
 def parse_args():
     "Parse the input arguments, use '-h' for help."
-    parser = argparse.ArgumentParser(usage='SeqSero2_package.py -t <data_type> -m <mode> -i <input_data> [-d <output_directory>] [-p <number of threads>] [-b <BWA_algorithm>]\n\nDevelopper: Shaokang Zhang (zskzsk@uga.edu), Hendrik C Den-Bakker (Hendrik.DenBakker@uga.edu) and Xiangyu Deng (xdeng@uga.edu)\n\nContact email:seqsero@gmail.com\n\nVersion: v1.0.2')#add "-m <data_type>" in future
-    parser.add_argument("-i",nargs="+",help="<string>: path/to/input_data",type=os.path.abspath)  ### ed_SL_05282019: add 'type=os.path.abspath' to generate absolute path of input data.
+    parser = argparse.ArgumentParser(usage='SeqSero2_package.py -t <data_type> -m <mode> -i <input_data> [-d <output_directory>] [-p <number of threads>] [-b <BWA_algorithm>]\n\nDevelopper: Shaokang Zhang (zskzsk@uga.edu), Hendrik C Den-Bakker (Hendrik.DenBakker@uga.edu) and Xiangyu Deng (xdeng@uga.edu)\n\nContact email:seqsero@gmail.com\n\nVersion: v1.1.0')#add "-m <data_type>" in future
+    parser.add_argument("-i",nargs="+",help="<string>: path/to/input_data",type=os.path.abspath)  ### add 'type=os.path.abspath' to generate absolute path of input data.
     parser.add_argument("-t",choices=['1','2','3','4','5','6'],help="<int>: '1' for interleaved paired-end reads, '2' for separated paired-end reads, '3' for single reads, '4' for genome assembly, '5' for nanopore fasta, '6' for nanopore fastq")
     parser.add_argument("-b",choices=['sam','mem'],default="mem",help="<string>: algorithms for bwa mapping for allele mode; 'mem' for mem, 'sam' for samse/sampe; default=mem; optional; for now we only optimized for default 'mem' mode")
     parser.add_argument("-p",default="1",help="<int>: number of threads for allele mode, if p >4, only 4 threads will be used for assembly since the amount of extracted reads is small, default=1")
     parser.add_argument("-m",choices=['k','a'],default="a",help="<string>: which workflow to apply, 'a'(raw reads allele micro-assembly), 'k'(raw reads and genome assembly k-mer), default=a")
-    parser.add_argument("-d",help="<string>: output directory name, if not set, the output directory would be 'SeqSero_result_'+time stamp+one random number")
+    parser.add_argument("-n",help="<string>: optional, to specify a sample name in the report output")
+    parser.add_argument("-d",help="<string>: optional, to specify an output directory name, if not set, the output directory would be 'SeqSero_result_'+time stamp+one random number")
     parser.add_argument("-c",action="store_true",help="<flag>: if '-c' was flagged, SeqSero2 will only output serotype prediction without the directory containing log files")
     parser.add_argument("--check",action="store_true",help="<flag>: use '--check' flag to check the required dependencies")
     parser.add_argument('-v', '--version', action='version', version='%(prog)s ' + SeqSero2_version)
     return parser.parse_args()
 
-### ed_SL_05282019: check paths of dependencies
+### check paths of dependencies
 check_dependencies = parse_args().check
 dependencies = ['bwa','samtools','blastn','fastq-dump','spades.py','bedtools','SalmID.py']
 if check_dependencies:
@@ -357,8 +358,11 @@ def seqsero_from_formula_to_serotypes(Otype, fliC, fljB, special_gene_list,subsp
     #analyze seronames
     subspecies_pointer=""
     if len(seronames) == 0 and len(seronames_none_subspecies)!=0:
-      seronames=seronames_none_subspecies
-      subspecies_pointer="1"
+      # ed_SL_12182019: modified to fix the subspecies output problem
+      #seronames=seronames_none_subspecies
+      seronames=["N/A"]
+      #subspecies_pointer="1"
+      subspecies_pointer="0"
     if len(seronames) == 0:
         seronames = [
             "N/A (The predicted antigenic profile does not exist in the White-Kauffmann-Le Minor scheme)"
@@ -371,7 +375,7 @@ def seqsero_from_formula_to_serotypes(Otype, fliC, fljB, special_gene_list,subsp
         #star_line = "The predicted serotypes share the same general formula:\t" + Otype + ":" + fliC + ":" + fljB + "\n"
     if subspecies_pointer=="1" and len(seronames_none_subspecies)!=0:
       star="*"
-      star_line=" The predicted O and H antigens correspond to serotype '"+(" or ").join(seronames)+"' in the Kauffmann-White scheme. The predicted subspecies by SalmID (github.com/hcdenbakker/SalmID) may not be consistent with subspecies designation in the Kauffmann-White scheme." + star_line
+      star_line="The predicted O and H antigens correspond to serotype '"+(" or ").join(seronames)+"' in the Kauffmann-White scheme. The predicted subspecies by SalmID (github.com/hcdenbakker/SalmID) may not be consistent with subspecies designation in the Kauffmann-White scheme. " + star_line
       #star_line="The formula with this subspieces prediction can't get a serotype in KW manual, and the serotyping prediction was made without considering it."+star_line
     if  Otype=="":
       Otype="-"
@@ -384,29 +388,29 @@ def seqsero_from_formula_to_serotypes(Otype, fliC, fljB, special_gene_list,subsp
             if x.startswith("sdf"):
                 sdf = "+"
                 #star_line="Detected sdf gene, a marker to differentiate Gallinarum and Enteritidis"
-                star_line=" sdf gene detected." # ed_SL_04152019: new output format
+                star_line="sdf gene detected. "
         #predict_form = predict_form + " Sdf prediction:" + sdf
         predict_form = predict_form #changed 04072019
         if sdf == "-":
             star = "*"
             #star_line="Didn't detected sdf gene, a marker to differentiate Gallinarum and Enteritidis"
-            star_line=" sdf gene not detected." # ed_SL_04152019: new output format
+            star_line="sdf gene not detected. "
             #changed in 04072019, for new output
             #star_line = "Additional characterization is necessary to assign a serotype to this strain.  Commonly circulating strains of serotype Enteritidis are sdf+, although sdf- strains of serotype Enteritidis are known to exist. Serotype Gallinarum is typically sdf- but should be quite rare. Sdf- strains of serotype Enteritidis and serotype Gallinarum can be differentiated by phenotypic profile or genetic criteria.\n"
             #predict_sero = "Gallinarum/Enteritidis" #04132019, for new output requirement
-            predict_sero = "Gallinarum or Enteritidis" # ed_SL_04152019: new output format
+            predict_sero = "Gallinarum or Enteritidis"
     ###end of special test for Enteritidis
     elif predict_form == "4:i:-":
-        predict_sero = "I 4,[5],12:i:-" # ed_SL_09242019: change serotype name
+        predict_sero = "I 4,[5],12:i:-" # change serotype name
     elif predict_form == "4:r:-":
         predict_sero = "4:r:-"
-    elif predict_form == "4:b:-": # ed_SL_09272019: change for new output format
+    elif predict_form == "4:b:-":
         predict_sero = "N/A (4:b:-)"
     #elif predict_form == "8:e,h:1,2": #removed after official merge of newport and bardo
         #predict_sero = "Newport"
         #star = "*"
         #star_line = "Serotype Bardo shares the same antigenic profile with Newport, but Bardo is exceedingly rare."
-    claim = " The serotype(s) is/are the only serotype(s) with the indicated antigenic profile currently recognized in the Kauffmann White Scheme. New serotypes can emerge and the possibility exists that this antigenic profile may emerge in a different subspecies.  Identification of strains to the subspecies level should accompany serotype determination; the same antigenic profile in different subspecies is considered different serotypes.\n"
+    claim = "The serotype(s) is/are the only serotype(s) with the indicated antigenic profile currently recognized in the Kauffmann White Scheme. New serotypes can emerge and the possibility exists that this antigenic profile may emerge in a different subspecies.  Identification of strains to the subspecies level should accompany serotype determination; the same antigenic profile in different subspecies is considered different serotypes.\n"
     if "N/A" in predict_sero:
         claim = ""
     #special test for Typhimurium
@@ -425,7 +429,7 @@ def seqsero_from_formula_to_serotypes(Otype, fliC, fljB, special_gene_list,subsp
             predict_sero = predict_sero.strip() #diable special sero for new output requirement, 04132019
             star = "*"
             #star_line = "Detected the deletion of O5-."
-            star_line = " Detected a deletion that causes O5- variant of Typhimurium." # ed_SL_04152019: new output format
+            star_line = "Detected a deletion that causes O5- variant of Typhimurium. "
         else:
             pass
     #special test for Paratyphi B
@@ -440,16 +444,16 @@ def seqsero_from_formula_to_serotypes(Otype, fliC, fljB, special_gene_list,subsp
         #print(normal,mutation)
         if normal > mutation:
             #predict_sero = predict_sero.strip() + "(dt+)" #diable special sero for new output requirement, 04132019
-            predict_sero = predict_sero.strip()+' var. L(+) tartrate+' if "Paratyphi B" in predict_sero else predict_sero.strip() # ed_SL_04152019: new output format
+            predict_sero = predict_sero.strip()+' var. L(+) tartrate+' if "Paratyphi B" in predict_sero else predict_sero.strip()
             star = "*"
             #star_line = "Didn't detect the SNP for dt- which means this isolate is a Paratyphi B variant L(+) tartrate(+)."
-            star_line = " The SNP that causes d-Tartrate nonfermentating phenotype of Paratyphi B was not detected. " # ed_SL_04152019: new output format
+            star_line = "The SNP that causes d-Tartrate nonfermentating phenotype of Paratyphi B was not detected. "
         elif normal < mutation:
             #predict_sero = predict_sero.strip() + "(dt-)" #diable special sero for new output requirement, 04132019
             predict_sero = predict_sero.strip()
             star = "*"
             #star_line = "Detected the SNP for dt- which means this isolate is a systemic pathovar of Paratyphi B."
-            star_line = " Detected the SNP for d-Tartrate nonfermenting phenotype of Paratyphi B." # ed_SL_04152019: new output format
+            star_line = "Detected the SNP for d-Tartrate nonfermenting phenotype of Paratyphi B. "
         else:
             star = "*"
             #star_line = " Failed to detect the SNP for dt-, can't decide it's a Paratyphi B variant L(+) tartrate(+) or not."
@@ -484,7 +488,7 @@ def seqsero_from_formula_to_serotypes(Otype, fliC, fljB, special_gene_list,subsp
               star = "*"
               #star_line = "Fail to detect O22 and O23 differences." #diabled for new output requirement, 04132019
     if " or " in predict_sero:
-      star_line = star_line + " The predicted serotypes share the same general formula:\t" + Otype + ":" + fliC + ":" + fljB + "\n"
+      star_line = star_line + "The predicted serotypes share the same general formula:\t" + Otype + ":" + fliC + ":" + fljB + "\n"
     #special test for O6,8 
     #merge_O68_list=["Blockley","Bovismorbificans","Hadar","Litchfield","Manhattan","Muenchen"] #remove 11/11/2018, because already in merge list
     #for x in merge_O68_list:
@@ -1064,6 +1068,8 @@ def call_O_and_H_type(O_dict,H_dict,Special_dict,make_dir):
       for x in O_dict:
           log_file.write(x+"\t"+str(O_dict[x])+"\n")
       if ('O-9,46_wbaV__1002' in O_dict and O_dict['O-9,46_wbaV__1002']>70) or ("O-9,46_wbaV-from-II-9,12:z29:1,5-SRR1346254__1002" in O_dict and O_dict['O-9,46_wbaV-from-II-9,12:z29:1,5-SRR1346254__1002']>70):  # not sure should use and float(O9_wbaV)/float(num_1) > 0.1
+          #if 'O-9,46_wzy__1191' in O_dict or "O-9,46_wzy_partial__216" in O_dict:  # and float(O946_wzy)/float(num_1) > 0.1
+          #modified to fix miscall of O-9,46
           if ('O-9,46_wzy__1191' in O_dict and O_dict['O-9,46_wzy__1191']>40) or ("O-9,46_wzy_partial__216" in O_dict and O_dict["O-9,46_wzy_partial__216"]>40):  # and float(O946_wzy)/float(num_1) > 0.1
               highest_O = "O-9,46"
           elif "O-9,46,27_partial_wzy__1019" in O_dict:  # and float(O94627)/float(num_1) > 0.1
@@ -1103,7 +1109,12 @@ def call_O_and_H_type(O_dict,H_dict,Special_dict,make_dir):
                       else:
                           if float(O_dict[x]) >= max_score:
                               max_score = float(O_dict[x])
-                              highest_O = x.split("_")[0]
+                              #highest_O = x.split("_")[0]
+                              # ed_SL_12182019: modified to fix the O-9,46 error example1
+                              if x == 'O-9,46_wbaV__1002' or x == 'O-9,46_wbaV-from-II-9,12:z29:1,5-SRR1346254__1002':
+                                  highest_O = "O-9"
+                              else:
+                                  highest_O = x.split("_")[0]
           except:
               pass
   #call_fliC:
@@ -1129,6 +1140,9 @@ def call_O_and_H_type(O_dict,H_dict,Special_dict,make_dir):
   for s in H_dict:
       if s.startswith('fljB'):
           if float(H_dict[s]) > highest_Score and float(H_dict[s]) > highest_H_score_both_BC * 0.65: #fljB is special, so use highest_H_score_both_BC to give a general estimate of coverage, currently 0.65 seems pretty good; the reason use a high (0.65) is some fliC and fljB shared with each other
+              #highest_fljB = s.split('_')[1]
+              #highest_fljB_raw = s
+              #highest_Score = float(H_dict[s])
               if s.split('_')[1]!=highest_fliC:
                   highest_fljB = s.split('_')[1]
                   highest_fljB_raw = s
@@ -1198,8 +1212,8 @@ def extract_mapped_reads_and_do_assembly_and_blast(current_time,sorted_bam,combi
       subprocess.check_call("spades.py --careful --pe1-s "+combined_fq+" --pe1-1 "+mapped_fq1+" --pe1-2 "+mapped_fq2+" -t "+t+" -o "+outdir+ " >> data_log.txt 2>&1",shell=True)
     else:
       subprocess.check_call("spades.py --careful --pe1-s "+combined_fq+" -t "+t+" -o "+outdir+ " >> data_log.txt 2>&1",shell=True)
-    #new_fasta=fnameA+"_"+database+"_"+mapping_mode+".fasta"
-    new_fasta=fnameA+"_"+database.split('/')[-1]+"_"+mapping_mode+".fasta" # ed_SL_09152019: change path to databse for packaging
+    new_fasta=fnameA+"_"+database+"_"+mapping_mode+".fasta"
+    #new_fasta=fnameA+"_"+database.split('/')[-1]+"_"+mapping_mode+".fasta" # change path to databse for packaging
     subprocess.check_call("mv "+outdir+"/contigs.fasta "+new_fasta+ " 2> /dev/null",shell=True)
     #os.system("mv "+outdir+"/scaffolds.fasta "+new_fasta+ " 2> /dev/null") contigs.fasta
     subprocess.check_call("rm -rf "+outdir+ " 2> /dev/null",shell=True)
@@ -1248,6 +1262,23 @@ def judge_subspecies_Kmer(Special_dict):
         break
   return prediction
 
+## ed_SL_11232019: add notes for missing antigen
+def check_antigens(ssp,O_antigen,H1_antigen,H2_antigen):
+  if O_antigen != '-' and H1_antigen == '-' and H2_antigen == '-':
+    antigen_note = 'H antigens were not detected. This is an atypical result that should be further investigated. Most Salmonella strains have at least fliC, encoding the Phase 1 H antigen, even if it is not expressed. '
+  elif O_antigen != '-' and H1_antigen == '-' and H2_antigen != '-':
+    antigen_note = 'fliC was not detected. This is an atypical result that should be further investigated. Most Salmonella strains have fliC, encoding the Phase 1 H antigen, even if it is not expressed. '
+  elif O_antigen == '-' and H1_antigen != '-':
+    antigen_note = 'O antigen was not detected. This result may be due to a rough strain that has deleted the rfb region. For raw reads input, the k-mer workflow is sometimes more sensitive than the microassembly workflow in detecting O antigen. Caution should be used with this approach because the k-mer result may be due to low levels of contamination. '
+  elif O_antigen == '-' and H1_antigen == '-' and H2_antigen == '-':
+    if ssp != '-':
+      antigen_note = 'No serotype antigens were detected. This is an atypical result that should be further investigated. '
+    else:
+      antigen_note = 'No serotype antigens were detected; further, this genome was not identified as Salmonella. This is an atypical result that should be further investigated. '
+  else:
+    antigen_note = ''
+  return (antigen_note)
+
 def main():
   #combine SeqSeroK and SeqSero2, also with SalmID
   args = parse_args()
@@ -1258,13 +1289,14 @@ def main():
   threads=args.p
   make_dir=args.d
   clean_mode=args.c
+  sample_name=args.n
   k_size=27 #will change for bug fixing
-  #database="H_and_O_and_specific_genes.fasta"
   dirpath = os.path.abspath(os.path.dirname(os.path.realpath(__file__)))
   ex_dir = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)),'seqsero2_db')) # ed_SL_09152019: add ex_dir for packaging
-  database=ex_dir+"/H_and_O_and_specific_genes.fasta" # ed_SL_09152019: change path to database for packaging
-  note="Note:"
-  NA_note=" This predicted serotype is not in the Kauffman-White scheme." # ed_SL_09272019: add for new output format
+  seqsero2_db=ex_dir+"/H_and_O_and_specific_genes.fasta" # ed_SL_11092019: change path to database for packaging
+  database="H_and_O_and_specific_genes.fasta"
+  note="Note:	"
+  NA_note="This predicted serotype is not in the Kauffman-White scheme. " # ed_SL_09272019: add for new output format
   if len(sys.argv)==1:
     subprocess.check_call(dirpath+"/SeqSero2_package.py -h",shell=True)#change name of python file
   else:
@@ -1278,8 +1310,8 @@ def main():
       subprocess.check_call(["mkdir",make_dir])
     #subprocess.check_call("cp "+dirpath+"/"+database+" "+" ".join(input_file)+" "+make_dir,shell=True)
     #subprocess.check_call("ln -sr "+dirpath+"/"+database+" "+" ".join(input_file)+" "+make_dir,shell=True)
-    subprocess.check_call("ln -f -s "+database+" "+" ".join(input_file)+" "+make_dir,shell=True) # ed_SL_09152019: change path to database for packaging 
-    #subprocess.check_call("ln -f -s "+dirpath+"/"+database+" "+" ".join(input_file)+" "+make_dir,shell=True) ### ed_SL_05282019: use -f option to force the replacement of links, remove -r and use absolute path instead to avoid link issue (use 'type=os.path.abspath' in -i argument).
+    subprocess.check_call("ln -f -s "+seqsero2_db+" "+" ".join(input_file)+" "+make_dir,shell=True) # ed_SL_11092019: change path to database for packaging 
+    #subprocess.check_call("ln -f -s "+dirpath+"/"+database+" "+" ".join(input_file)+" "+make_dir,shell=True) ### use -f option to force the replacement of links, remove -r and use absolute path instead to avoid link issue (use 'type=os.path.abspath' in -i argument).
   ############################begin the real analysis 
     if analysis_mode=="a":
       if data_type in ["1","2","3"]:#use allele mode
@@ -1316,68 +1348,78 @@ def main():
           contamination_report="#Potential inter-serotype contamination detected from both O and H antigen signals.All O-antigens detected:"+"\t".join(Otypes_uniq)+". All H-antigens detected:"+"\t".join(H_list)+"."
         if contamination_report!="":
           #contamination_report="potential inter-serotype contamination detected (please refer below antigen signal report for details)." #above contamination_reports are for back-up and bug fixing #web-based mode need to be re-used, 04132019
-          contamination_report=" Co-existence of multiple serotypes detected, indicating potential inter-serotype contamination. See 'Extracted_antigen_alleles.fasta' for detected serotype determinant alleles."
+          contamination_report="Co-existence of multiple serotypes detected, indicating potential inter-serotype contamination. See 'Extracted_antigen_alleles.fasta' for detected serotype determinant alleles. "
         #claim="\n"+open("Extracted_antigen_alleles.fasta","r").read()#used to store H and O antigen sequeences #04132019, need to change if using web-version
-        ## ed_SL_09272019: change for new output format
         #if contamination_report+star_line+claim=="": #0413, new output style
         #  note=""
         #else:
         #  note="Note:"
+
+        ### ed_SL_11232019: add notes for missing antigen
+        if O_choice=="":
+          O_choice="-"
+        antigen_note=check_antigens(subspecies,O_choice,fliC_choice,fljB_choice)
+        if sample_name:
+          print ("Sample name:\t"+sample_name)
+        ###
+
         if clean_mode:
           subprocess.check_call("rm -rf ../"+make_dir,shell=True)
           make_dir="none-output-directory due to '-c' flag"
         else:
           new_file=open("SeqSero_result.txt","w")
-          if O_choice=="":
-            O_choice="-"
+          
+          ### ed_SL_11232019: add for sample name
+          if sample_name:
+            new_file.write("Sample name:\t"+sample_name+"\n")
+          ###
           if "N/A" not in predict_sero:
-            new_file.write("Output_directory:\t"+make_dir+"\n"+
+            new_file.write("Output directory:\t"+make_dir+"\n"+
                            "Input files:\t"+"\t".join(input_file)+"\n"+
                            "O antigen prediction:\t"+O_choice+"\n"+
                            "H1 antigen prediction(fliC):\t"+fliC_choice+"\n"+
                            "H2 antigen prediction(fljB):\t"+fljB_choice+"\n"+
                            "Predicted subspecies:\t"+subspecies+"\n"+
                            "Predicted antigenic profile:\t"+predict_form+"\n"+
-                           "Predicted serotype:\t"+predict_sero+"\n"+ # ed_SL_04152019: change serotype(s) to serotype
-                           note+contamination_report+star_line+claim+"\n")#+##
+                           "Predicted serotype:\t"+predict_sero+"\n"+
+                           note+contamination_report+star_line+claim+antigen_note+"\n")#+##
           else:
             #star_line=star_line.strip()+"\tNone such antigenic formula in KW.\n"
             star_line="" #04132019, for new output requirement, diable star_line if "NA" in output
-            new_file.write("Output_directory:\t"+make_dir+"\n"+
+            new_file.write("Output directory:\t"+make_dir+"\n"+
                            "Input files:\t"+"\t".join(input_file)+"\n"+
                            "O antigen prediction:\t"+O_choice+"\n"+
                            "H1 antigen prediction(fliC):\t"+fliC_choice+"\n"+
                            "H2 antigen prediction(fljB):\t"+fljB_choice+"\n"+
                            "Predicted subspecies:\t"+subspecies+"\n"+
                            "Predicted antigenic profile:\t"+predict_form+"\n"+
-                           "Predicted serotype:\t"+predict_form+"\n"+ # ed_SL_09242019: add serotype output for "N/A" prediction
-                           note+NA_note+contamination_report+star_line+claim+"\n")#+##
+                           "Predicted serotype:\t"+predict_form+"\n"+ # add serotype output for "N/A" prediction
+                           note+NA_note+contamination_report+star_line+claim+antigen_note+"\n")#+##
           new_file.close()
-          print("\n")
           #subprocess.check_call("cat Seqsero_result.txt",shell=True)
           #subprocess.call("rm H_and_O_and_specific_genes.fasta* *.sra *.bam *.sam *.fastq *.gz *.fq temp.txt *.xml "+fnameA+"*_db* 2> /dev/null",shell=True)
           subprocess.call("rm H_and_O_and_specific_genes.fasta* *.sra *.bam *.sam *.fastq *.gz *.fq temp.txt "+fnameA+"*_db* 2> /dev/null",shell=True)
         if "N/A" not in predict_sero:
           #print("Output_directory:"+make_dir+"\nInput files:\t"+for_fq+" "+rev_fq+"\n"+"O antigen prediction:\t"+O_choice+"\n"+"H1 antigen prediction(fliC):\t"+fliC_choice+"\n"+"H2 antigen prediction(fljB):\t"+fljB_choice+"\n"+"Predicted antigenic profile:\t"+predict_form+"\n"+"Predicted subspecies:\t"+subspecies+"\n"+"Predicted serotype(s):\t"+predict_sero+star+"\nNote:"+contamination_report+star+star_line+claim+"\n")#+##
-          print("Output_directory:\t"+make_dir+"\n"+
+          print("Output directory:\t"+make_dir+"\n"+
                 "Input files:\t"+"\t".join(input_file)+"\n"+
                 "O antigen prediction:\t"+O_choice+"\n"+
                 "H1 antigen prediction(fliC):\t"+fliC_choice+"\n"+
                 "H2 antigen prediction(fljB):\t"+fljB_choice+"\n"+
                 "Predicted subspecies:\t"+subspecies+"\n"+
                 "Predicted antigenic profile:\t"+predict_form+"\n"+
-                "Predicted serotype:\t"+predict_sero+"\n"+ # ed_SL_04152019: change serotype(s) to serotype
-                note+contamination_report+star_line+claim+"\n")#+##
+                "Predicted serotype:\t"+predict_sero+"\n"+
+                note+contamination_report+star_line+claim+antigen_note+"\n")#+##
         else:
-          print("Output_directory:\t"+make_dir+"\n"+
+          print("Output directory:\t"+make_dir+"\n"+
                 "Input files:\t"+"\t".join(input_file)+"\n"+
                 "O antigen prediction:\t"+O_choice+"\n"+
                 "H1 antigen prediction(fliC):\t"+fliC_choice+"\n"+
                 "H2 antigen prediction(fljB):\t"+fljB_choice+"\n"+
                 "Predicted subspecies:\t"+subspecies+"\n"+
                 "Predicted antigenic profile:\t"+predict_form+"\n"+
-                "Predicted serotype:\t"+predict_form+"\n"+ # ed_SL_09242019: add serotype output for "N/A" prediction
-                note+NA_note+contamination_report+star_line+claim+"\n")
+                "Predicted serotype:\t"+predict_form+"\n"+ # add serotype output for "N/A" prediction
+                note+NA_note+contamination_report+star_line+claim+antigen_note+"\n")
       else:
         print("Allele modes only support raw reads datatype, i.e. '-t 1 or 2 or 3'; please use '-m k'")
     elif analysis_mode=="k":
@@ -1399,72 +1441,86 @@ def main():
       predict_form,predict_sero,star,star_line,claim = seqsero_from_formula_to_serotypes(
           highest_O.split('-')[1], highest_fliC, highest_fljB, Special_dict,subspecies)
       claim="" #no claim any more based on new output requirement
-      ## ed_SL_09272019: change for new output format
       #if star_line+claim=="": #0413, new output style
       #  note=""
       #else:
       #  note="Note:"
+
+      ### ed_SL_11232019: add notes for missing antigen
+      if highest_O.split('-')[-1]=="":
+        O_choice="-"
+      else:
+        O_choice=highest_O.split('-')[-1]
+      antigen_note=check_antigens(subspecies,O_choice,highest_fliC,highest_fljB)
+      if sample_name:
+        print ("Sample name:\t"+sample_name)
+      ###
+
       if clean_mode:
         subprocess.check_call("rm -rf ../"+make_dir,shell=True)
         make_dir="none-output-directory due to '-c' flag"
-        ### ed_SL_05282019, fix the assignment issue of variable 'O_choice' using "-m k -c"
-        if highest_O.split('-')[-1]=="":
-          O_choice="-"
-        else:
-          O_choice=highest_O.split('-')[-1]
-        ###
+      #  ### ed_SL_05282019, fix the assignment issue of variable 'O_choice' using "-m k -c"
+      #  if highest_O.split('-')[-1]=="":
+      #    O_choice="-"
+      #  else:
+      #    O_choice=highest_O.split('-')[-1]
+      #  ###
       else:
-        if highest_O.split('-')[-1]=="":
-          O_choice="-"
-        else:
-          O_choice=highest_O.split('-')[-1]
+      #  if highest_O.split('-')[-1]=="":
+      #    O_choice="-"
+      #  else:
+      #    O_choice=highest_O.split('-')[-1]
         #print("Output_directory:"+make_dir+"\tInput_file:"+input_file+"\tPredicted subpecies:"+subspecies + '\tPredicted antigenic profile:' + predict_form + '\tPredicted serotype(s):' + predict_sero)
         new_file=open("SeqSero_result.txt","w")
         #new_file.write("Output_directory:"+make_dir+"\nInput files:\t"+input_file+"\n"+"O antigen prediction:\t"+O_choice+"\n"+"H1 antigen prediction(fliC):\t"+highest_fliC+"\n"+"H2 antigen prediction(fljB):\t"+highest_fljB+"\n"+"Predicted antigenic profile:\t"+predict_form+"\n"+"Predicted subspecies:\t"+subspecies+"\n"+"Predicted serotype(s):\t"+predict_sero+star+"\n"+star+star_line+claim+"\n")#+##
+        ### ed_SL_11232019: add for sample name
+        if sample_name: 
+            new_file.write("Sample name:\t"+sample_name+"\n")
+        ###
         if "N/A" not in predict_sero:
-          new_file.write("Output_directory:\t"+make_dir+"\n"+
+          new_file.write("Output directory:\t"+make_dir+"\n"+
                          "Input files:\t"+input_file+"\n"+
                          "O antigen prediction:\t"+O_choice+"\n"+
                          "H1 antigen prediction(fliC):\t"+highest_fliC+"\n"+
                          "H2 antigen prediction(fljB):\t"+highest_fljB+"\n"+
                          "Predicted subspecies:\t"+subspecies+"\n"+
                          "Predicted antigenic profile:\t"+predict_form+"\n"+
-                         "Predicted serotype:\t"+predict_sero+"\n"+ # ed_SL_04152019: change serotype(s) to serotype
-                         note+star_line+claim+"\n")#+##
+                         "Predicted serotype:\t"+predict_sero+"\n"+
+                         note+star_line+claim+antigen_note+"\n")#+##
         else:
           #star_line=star_line.strip()+"\tNone such antigenic formula in KW.\n"
           star_line = "" #changed for new output requirement, 04132019
-          new_file.write("Output_directory:\t"+make_dir+"\n"+
+          new_file.write("Output directory:\t"+make_dir+"\n"+
                          "Input files:\t"+input_file+"\n"+
                          "O antigen prediction:\t"+O_choice+"\n"+
                          "H1 antigen prediction(fliC):\t"+highest_fliC+"\n"+
                          "H2 antigen prediction(fljB):\t"+highest_fljB+"\n"+
                          "Predicted subspecies:\t"+subspecies+"\n"+
                          "Predicted antigenic profile:\t"+predict_form+"\n"+
-                         "Predicted serotype:\t"+predict_form+"\n"+ # ed_SL_09242019: add serotype output for "N/A" prediction
-                         note+NA_note+star_line+claim+"\n")#+##
+                         "Predicted serotype:\t"+predict_form+"\n"+ # add serotype output for "N/A" prediction
+                         note+NA_note+star_line+claim+antigen_note+"\n")#+##
         new_file.close()
         subprocess.call("rm *.fasta* *.fastq *.gz *.fq temp.txt *.sra 2> /dev/null",shell=True)
       if "N/A" not in predict_sero:
-        print("Output_directory:\t"+make_dir+"\n"+
+        print("Output directory:\t"+make_dir+"\n"+
               "Input files:\t"+input_file+"\n"+
               "O antigen prediction:\t"+O_choice+"\n"+
               "H1 antigen prediction(fliC):\t"+highest_fliC+"\n"+
               "H2 antigen prediction(fljB):\t"+highest_fljB+"\n"+
               "Predicted subspecies:\t"+subspecies+"\n"+
               "Predicted antigenic profile:\t"+predict_form+"\n"+
-              "Predicted serotype:\t"+predict_sero+"\n"+ # ed_SL_04152019: change serotype(s) to serotype
-              note+star_line+claim+"\n")#+##
+              "Predicted serotype:\t"+predict_sero+"\n"+
+              note+star_line+claim+antigen_note+"\n")#+##
       else:
-        print("Output_directory:\t"+make_dir+"\n"+
+        print("Output directory:\t"+make_dir+"\n"+
               "Input files:\t"+input_file+"\n"+
               "O antigen prediction:\t"+O_choice+"\n"+
               "H1 antigen prediction(fliC):\t"+highest_fliC+"\n"+
               "H2 antigen prediction(fljB):\t"+highest_fljB+"\n"+
               "Predicted subspecies:\t"+subspecies+"\n"+
               "Predicted antigenic profile:\t"+predict_form+"\n"+
-              "Predicted serotype:\t"+predict_form+"\n"+ # ed_SL_09242019: add serotype output for "N/A" prediction
-              note+NA_note+star_line+claim+"\n")#+##
+              "Predicted serotype:\t"+predict_form+"\n"+ # add serotype output for "N/A" prediction
+              note+NA_note+star_line+claim+antigen_note+"\n")#+##
 
 if __name__ == '__main__':
   main()
