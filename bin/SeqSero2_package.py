@@ -31,6 +31,7 @@ def parse_args():
     parser.add_argument("-n",help="<string>: optional, to specify a sample name in the report output")
     parser.add_argument("-d",help="<string>: optional, to specify an output directory name, if not set, the output directory would be 'SeqSero_result_'+time stamp+one random number")
     parser.add_argument("-c",action="store_true",help="<flag>: if '-c' was flagged, SeqSero2 will only output serotype prediction without the directory containing log files")
+    parser.add_argument("-s",action="store_true",help="<flag>: if '-s' was flagged, SeqSero2 will not output header in SeqSero_result.tsv")
     parser.add_argument("--check",action="store_true",help="<flag>: use '--check' flag to check the required dependencies")
     parser.add_argument('-v', '--version', action='version', version='%(prog)s ' + SeqSero2_version)
     return parser.parse_args()
@@ -488,7 +489,7 @@ def seqsero_from_formula_to_serotypes(Otype, fliC, fljB, special_gene_list,subsp
               star = "*"
               #star_line = "Fail to detect O22 and O23 differences." #diabled for new output requirement, 04132019
     if " or " in predict_sero:
-      star_line = star_line + "The predicted serotypes share the same general formula:\t" + Otype + ":" + fliC + ":" + fljB + "\n"
+      star_line = star_line + "The predicted serotypes share the same general formula: " + Otype + ":" + fliC + ":" + fljB + "."
     #special test for O6,8 
     #merge_O68_list=["Blockley","Bovismorbificans","Hadar","Litchfield","Manhattan","Muenchen"] #remove 11/11/2018, because already in merge list
     #for x in merge_O68_list:
@@ -1295,6 +1296,7 @@ def main():
   make_dir=args.d
   clean_mode=args.c
   sample_name=args.n
+  ingore_header=args.s
   k_size=27 #will change for bug fixing
   dirpath = os.path.abspath(os.path.dirname(os.path.realpath(__file__)))
   ex_dir = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)),'seqsero2_db')) # ed_SL_09152019: add ex_dir for packaging
@@ -1373,10 +1375,18 @@ def main():
           make_dir="none-output-directory due to '-c' flag"
         else:
           new_file=open("SeqSero_result.txt","w")
-          
-          ### ed_SL_11232019: add for sample name
+          ### ed_SL_01152020: add new output
+          conta_note="yes" if "inter-serotype contamination" in contamination_report else "no"
+          tsv_file=open("SeqSero_result.tsv","w")
+          if ingore_header:
+            pass
+          else:
+            tsv_file.write("Sample name\tOutput directory\tInput files\tO antigen prediction\tH1 antigen prediction(fliC)\tH2 antigen prediction(fljB)\tPredicted subspecies\tPredicted antigenic profile\tPredicted serotype\tPotential inter-serotype contamination\tNote\n")
           if sample_name:
             new_file.write("Sample name:\t"+sample_name+"\n")
+            tsv_file.write(sample_name+'\t')
+          else:
+            tsv_file.write(input_file[0].split('/')[-1]+'\t')
           ###
           if "N/A" not in predict_sero:
             new_file.write("Output directory:\t"+make_dir+"\n"+
@@ -1388,6 +1398,7 @@ def main():
                            "Predicted antigenic profile:\t"+predict_form+"\n"+
                            "Predicted serotype:\t"+predict_sero+"\n"+
                            note+contamination_report+star_line+claim+antigen_note+"\n")#+##
+            tsv_file.write(make_dir+"\t"+" ".join(input_file)+"\t"+O_choice+"\t"+fliC_choice+"\t"+fljB_choice+"\t"+subspecies+"\t"+predict_form+"\t"+predict_sero+"\t"+conta_note+"\t"+contamination_report+star_line+claim+antigen_note+"\n")
           else:
             #star_line=star_line.strip()+"\tNone such antigenic formula in KW.\n"
             star_line="" #04132019, for new output requirement, diable star_line if "NA" in output
@@ -1400,7 +1411,9 @@ def main():
                            "Predicted antigenic profile:\t"+predict_form+"\n"+
                            "Predicted serotype:\t"+predict_form+"\n"+ # add serotype output for "N/A" prediction
                            note+NA_note+contamination_report+star_line+claim+antigen_note+"\n")#+##
+            tsv_file.write(make_dir+"\t"+" ".join(input_file)+"\t"+O_choice+"\t"+fliC_choice+"\t"+fljB_choice+"\t"+subspecies+"\t"+predict_form+"\t"+predict_form+"\t"+conta_note+"\t"+NA_note+contamination_report+star_line+claim+antigen_note+"\n")
           new_file.close()
+          tsv_file.close()
           #subprocess.check_call("cat Seqsero_result.txt",shell=True)
           #subprocess.call("rm H_and_O_and_specific_genes.fasta* *.sra *.bam *.sam *.fastq *.gz *.fq temp.txt *.xml "+fnameA+"*_db* 2> /dev/null",shell=True)
           subprocess.call("rm H_and_O_and_specific_genes.fasta* *.sra *.bam *.sam *.fastq *.gz *.fq temp.txt "+fnameA+"*_db* 2> /dev/null",shell=True)
@@ -1478,9 +1491,17 @@ def main():
         #print("Output_directory:"+make_dir+"\tInput_file:"+input_file+"\tPredicted subpecies:"+subspecies + '\tPredicted antigenic profile:' + predict_form + '\tPredicted serotype(s):' + predict_sero)
         new_file=open("SeqSero_result.txt","w")
         #new_file.write("Output_directory:"+make_dir+"\nInput files:\t"+input_file+"\n"+"O antigen prediction:\t"+O_choice+"\n"+"H1 antigen prediction(fliC):\t"+highest_fliC+"\n"+"H2 antigen prediction(fljB):\t"+highest_fljB+"\n"+"Predicted antigenic profile:\t"+predict_form+"\n"+"Predicted subspecies:\t"+subspecies+"\n"+"Predicted serotype(s):\t"+predict_sero+star+"\n"+star+star_line+claim+"\n")#+##
-        ### ed_SL_11232019: add for sample name
+        ### ed_SL_01152020: add new output
+        tsv_file=open("SeqSero_result.tsv","w")
+        if ingore_header:
+          pass
+        else:
+          tsv_file.write("Sample name\tOutput directory\tInput files\tO antigen prediction\tH1 antigen prediction(fliC)\tH2 antigen prediction(fljB)\tPredicted subspecies\tPredicted antigenic profile\tPredicted serotype\tNote\n")
         if sample_name: 
-            new_file.write("Sample name:\t"+sample_name+"\n")
+          new_file.write("Sample name:\t"+sample_name+"\n")
+          tsv_file.write(sample_name+'\t')
+        else:
+          tsv_file.write(input_file.split('/')[-1]+'\t')
         ###
         if "N/A" not in predict_sero:
           new_file.write("Output directory:\t"+make_dir+"\n"+
@@ -1492,6 +1513,7 @@ def main():
                          "Predicted antigenic profile:\t"+predict_form+"\n"+
                          "Predicted serotype:\t"+predict_sero+"\n"+
                          note+star_line+claim+antigen_note+"\n")#+##
+          tsv_file.write(make_dir+"\t"+input_file+"\t"+O_choice+"\t"+highest_fliC+"\t"+highest_fljB+"\t"+subspecies+"\t"+predict_form+"\t"+predict_sero+"\t"+star_line+claim+antigen_note+"\n")
         else:
           #star_line=star_line.strip()+"\tNone such antigenic formula in KW.\n"
           star_line = "" #changed for new output requirement, 04132019
@@ -1504,7 +1526,9 @@ def main():
                          "Predicted antigenic profile:\t"+predict_form+"\n"+
                          "Predicted serotype:\t"+predict_form+"\n"+ # add serotype output for "N/A" prediction
                          note+NA_note+star_line+claim+antigen_note+"\n")#+##
+          tsv_file.write(make_dir+"\t"+input_file+"\t"+O_choice+"\t"+highest_fliC+"\t"+highest_fljB+"\t"+subspecies+"\t"+predict_form+"\t"+predict_form+"\t"+NA_note+star_line+claim+antigen_note+"\n")
         new_file.close()
+        tsv_file.close()
         subprocess.call("rm *.fasta* *.fastq *.gz *.fq temp.txt *.sra 2> /dev/null",shell=True)
       if "N/A" not in predict_sero:
         print("Output directory:\t"+make_dir+"\n"+
