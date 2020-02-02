@@ -759,6 +759,8 @@ def decide_O_type_and_get_special_genes(Final_list,Final_list_passed):
       except:
         pass
         #print "$$$No suitable Otype, or failure of mapping (please check the quality of raw reads)"
+  if O_choice=="O-9,46,27" and len(O_list)==2 and "O-4_wzx" in O_list: #special for very low chance sitatuion between O4 and O9,27,46, this is for serotypes like Bredeney and Schwarzengrund (normallly O-4 will have higher score, but sometimes sequencing quality may affect the prediction)
+    O_choice="O-4"
   #print "O:",O_choice,O_nodes_list
   Otypes=[]
   for x in O_list:
