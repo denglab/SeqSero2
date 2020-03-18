@@ -1281,13 +1281,12 @@ def check_antigens(ssp,O_antigen,H1_antigen,H2_antigen):
     elif O_antigen == '-' and H1_antigen != '-': # -:H1:X
       antigen_note = 'O antigen was not detected. This result may be due to a rough strain that has deleted the rfb region. For raw reads input, the k-mer workflow is sometimes more sensitive than the microassembly workflow in detecting O antigen. Caution should be used with this approach because the k-mer result may be due to low levels of contamination. '
     elif O_antigen == '-' and H1_antigen == '-' and H2_antigen == '-': # -:-:-
-    #if ssp != '-':
       antigen_note = 'No serotype antigens were detected. This genome may not be Salmonella. This is an atypical result that should be further investigated. '
   else:  
     if [O_antigen, H1_antigen, H2_antigen].count('-') >= 2:
       antigen_note = 'No subspecies marker was detected and less than 2 serotype antigens were detected; further, this genome was not identified as Salmonella. This is an atypical result that should be further investigated. '
     else:
-      antigen_note = 'No subspecies marker was detected. This genome may not be Salmonella or missing subspecies marker. This is an atypical result that should be further investigated. '
+      antigen_note = 'No subspecies marker was detected. This genome may not be Salmonella. This is an atypical result that should be further investigated. '
   return (antigen_note)
 
 def main():
