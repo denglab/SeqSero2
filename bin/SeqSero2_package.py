@@ -1250,9 +1250,11 @@ def judge_subspecies(fnameA):
       max_score=float(salm_species_scores[i])
       max_score_index=i
   prediction=salm_species_results[max_score_index].split(".")[1].strip().split(" ")[0]
-  if float(out.split("\n")[1].split("\t")[4]) > float(out.split("\n")[1].split("\t")[5]): #bongori and enterica compare
+  #if float(out.split("\n")[1].split("\t")[4]) > float(out.split("\n")[1].split("\t")[5]): #bongori and enterica compare
+  if float(out.split("\n")[1].split("\t")[4]) > 10 and float(out.split("\n")[1].split("\t")[4]) > float(out.split("\n")[1].split("\t")[5]): ## ed_SL_0318: change SalmID_ssp_threshold
     prediction="bongori" #if not, the prediction would always be enterica, since they are located in the later part
-  if max_score<10:
+  #if max_score<10:  ## ed_SL_0318: change SalmID_ssp_threshold
+  if max_score<70:
     prediction="-"
   return prediction
 
@@ -1261,7 +1263,8 @@ def judge_subspecies_Kmer(Special_dict):
   max_score=0
   prediction="-" #default should be I
   for x in Special_dict:
-    if "mer" in x:
+    #if "mer" in x: ## ed_SL_0318: change ssp_threshold
+    if "mer" in x and float(Special_dict[x]) > 70:
       if max_score<float(Special_dict[x]):
         max_score=float(Special_dict[x])
         prediction=x.split("_")[-1].strip()
@@ -1271,23 +1274,29 @@ def judge_subspecies_Kmer(Special_dict):
   return prediction
 
 ## ed_SL_11232019: add notes for missing antigen
-def check_antigens(ssp,O_antigen,H1_antigen,H2_antigen):
+def check_antigens(ssp,O_antigen,H1_antigen,H2_antigen,NA_note):
   antigen_note = ''
   if ssp != '-':
     if O_antigen != '-' and H1_antigen == '-' and H2_antigen == '-': # O:-:-
       antigen_note = 'H antigens were not detected. This is an atypical result that should be further investigated. Most Salmonella strains have at least fliC, encoding the Phase 1 H antigen, even if it is not expressed. '
+      NA_note = ''
     elif O_antigen != '-' and H1_antigen == '-' and H2_antigen != '-': # O:-:H2
       antigen_note = 'fliC was not detected. This is an atypical result that should be further investigated. Most Salmonella strains have fliC, encoding the Phase 1 H antigen, even if it is not expressed. '
+      NA_note = ''
     elif O_antigen == '-' and H1_antigen != '-': # -:H1:X
       antigen_note = 'O antigen was not detected. This result may be due to a rough strain that has deleted the rfb region. For raw reads input, the k-mer workflow is sometimes more sensitive than the microassembly workflow in detecting O antigen. Caution should be used with this approach because the k-mer result may be due to low levels of contamination. '
+      NA_note = ''
     elif O_antigen == '-' and H1_antigen == '-' and H2_antigen == '-': # -:-:-
-      antigen_note = 'No serotype antigens were detected. This genome may not be Salmonella. This is an atypical result that should be further investigated. '
-  else:  
-    if [O_antigen, H1_antigen, H2_antigen].count('-') >= 2:
-      antigen_note = 'No subspecies marker was detected and less than 2 serotype antigens were detected; further, this genome was not identified as Salmonella. This is an atypical result that should be further investigated. '
-    else:
-      antigen_note = 'No subspecies marker was detected. This genome may not be Salmonella. This is an atypical result that should be further investigated. '
-  return (antigen_note)
+      antigen_note = 'No serotype antigens were detected. This is an atypical result that should be further investigated. '
+      NA_note = ''
+  else:
+    antigen_note = 'The input genome cannot be identified as Salmonella. Check the input for taxonomic ID, contamination, or sequencing quality. '
+    NA_note = ''
+#    if [O_antigen, H1_antigen, H2_antigen].count('-') >= 2:
+#      antigen_note = 'No subspecies marker was detected and less than 2 serotype antigens were detected; further, this genome was not identified as Salmonella. This is an atypical result that should be further investigated. '
+#    else:
+#      antigen_note = 'No subspecies marker was detected. This genome may not be Salmonella. This is an atypical result that should be further investigated. '
+  return (antigen_note,NA_note)
 
 def main():
   #combine SeqSeroK and SeqSero2, also with SalmID
@@ -1334,14 +1343,13 @@ def main():
         current_time=time.strftime("%Y_%m_%d_%H_%M_%S", time.localtime())
         sam,bam,sorted_bam,mapped_fq1,mapped_fq2,combined_fq,for_sai,rev_sai=get_temp_file_names(fnameA,fnameB) #get temp files id
         map_and_sort(threads,database,fnameA,fnameB,sam,bam,for_sai,rev_sai,sorted_bam,mapping_mode) #do mapping and sort
-        ### avoid error out when micro assembly fails. ed_SE_03172020
+        ### avoid error out when micro assembly fails. ed_SL_03172020
         try:
           xmlfile,new_fasta=extract_mapped_reads_and_do_assembly_and_blast(current_time,sorted_bam,combined_fq,mapped_fq1,mapped_fq2,threads,fnameA,fnameB,database,mapping_mode) #extract the mapped reads and do micro assembly and blast
-        except UnboundLocalError or subprocess.CalledProcessError:
+        except (UnboundLocalError, subprocess.CalledProcessError):
           xmlfile="NA"
           H1_cont_stat_list=[]
           H2_cont_stat_list=[]
-          NA_note="Micro assembly failed. "
         ###
         if xmlfile=="NA":
           O_choice,fliC_choice,fljB_choice,special_gene_list,contamination_O,contamination_H=("-","-","-",[],"","")
@@ -1377,7 +1385,7 @@ def main():
         ### ed_SL_11232019: add notes for missing antigen
         if O_choice=="":
           O_choice="-"
-        antigen_note=check_antigens(subspecies,O_choice,fliC_choice,fljB_choice)
+        antigen_note,NA_note=check_antigens(subspecies,O_choice,fliC_choice,fljB_choice,NA_note)
         if sample_name:
           print ("Sample name:\t"+sample_name)
         ###
@@ -1423,7 +1431,7 @@ def main():
                            "Predicted antigenic profile:\t"+predict_form+"\n"+
                            "Predicted serotype:\t"+subspecies+' '+predict_form+"\n"+ # add serotype output for "N/A" prediction, add subspecies
                            note+NA_note+contamination_report+star_line+claim+antigen_note+"\n")#+##
-            tsv_file.write(make_dir+"\t"+" ".join(input_file)+"\t"+O_choice+"\t"+fliC_choice+"\t"+fljB_choice+"\t"+subspecies+"\t"+predict_form+"\t"+predict_form+"\t"+conta_note+"\t"+NA_note+contamination_report+star_line+claim+antigen_note+"\n")
+            tsv_file.write(make_dir+"\t"+" ".join(input_file)+"\t"+O_choice+"\t"+fliC_choice+"\t"+fljB_choice+"\t"+subspecies+"\t"+predict_form+"\t"+ubspecies+' '+redict_form+"\t"+conta_note+"\t"+NA_note+contamination_report+star_line+claim+antigen_note+"\n")
           new_file.close()
           tsv_file.close()
           #subprocess.check_call("cat Seqsero_result.txt",shell=True)
@@ -1481,7 +1489,7 @@ def main():
         O_choice="-"
       else:
         O_choice=highest_O.split('-')[-1]
-      antigen_note=check_antigens(subspecies,O_choice,highest_fliC,highest_fljB)
+      antigen_note,NA_note=check_antigens(subspecies,O_choice,highest_fliC,highest_fljB,NA_note)
       if sample_name:
         print ("Sample name:\t"+sample_name)
       ###
@@ -1538,7 +1546,7 @@ def main():
                          "Predicted antigenic profile:\t"+predict_form+"\n"+
                          "Predicted serotype:\t"+subspecies+' '+predict_form+"\n"+ # add serotype output for "N/A" prediction, subspecies
                          note+NA_note+star_line+claim+antigen_note+"\n")#+##
-          tsv_file.write(make_dir+"\t"+input_file+"\t"+O_choice+"\t"+highest_fliC+"\t"+highest_fljB+"\t"+subspecies+"\t"+predict_form+"\t"+predict_form+"\t"+NA_note+star_line+claim+antigen_note+"\n")
+          tsv_file.write(make_dir+"\t"+input_file+"\t"+O_choice+"\t"+highest_fliC+"\t"+highest_fljB+"\t"+subspecies+"\t"+predict_form+"\t"+subspecies+' '+predict_form+"\t"+NA_note+star_line+claim+antigen_note+"\n")
         new_file.close()
         tsv_file.close()
         subprocess.call("rm *.fasta* *.fastq *.gz *.fq temp.txt *.sra 2> /dev/null",shell=True)
