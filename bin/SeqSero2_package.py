@@ -31,6 +31,7 @@ def parse_args():
     parser.add_argument("-n",help="<string>: optional, to specify a sample name in the report output")
     parser.add_argument("-d",help="<string>: optional, to specify an output directory name, if not set, the output directory would be 'SeqSero_result_'+time stamp+one random number")
     parser.add_argument("-c",action="store_true",help="<flag>: if '-c' was flagged, SeqSero2 will only output serotype prediction without the directory containing log files")
+    parser.add_argument("-s",action="store_true",help="<flag>: if '-s' was flagged, SeqSero2 will not output header in SeqSero_result.tsv")
     parser.add_argument("--check",action="store_true",help="<flag>: use '--check' flag to check the required dependencies")
     parser.add_argument('-v', '--version', action='version', version='%(prog)s ' + SeqSero2_version)
     return parser.parse_args()
@@ -403,7 +404,7 @@ def seqsero_from_formula_to_serotypes(Otype, fliC, fljB, special_gene_list,subsp
     elif predict_form == "4:i:-":
         predict_sero = "I 4,[5],12:i:-" # change serotype name
     elif predict_form == "4:r:-":
-        predict_sero = "4:r:-"
+        predict_sero = "N/A (4:r:-)"
     elif predict_form == "4:b:-":
         predict_sero = "N/A (4:b:-)"
     #elif predict_form == "8:e,h:1,2": #removed after official merge of newport and bardo
@@ -488,7 +489,7 @@ def seqsero_from_formula_to_serotypes(Otype, fliC, fljB, special_gene_list,subsp
               star = "*"
               #star_line = "Fail to detect O22 and O23 differences." #diabled for new output requirement, 04132019
     if " or " in predict_sero:
-      star_line = star_line + "The predicted serotypes share the same general formula:\t" + Otype + ":" + fliC + ":" + fljB + "\n"
+      star_line = star_line + "The predicted serotypes share the same general formula: " + Otype + ":" + fliC + ":" + fljB + "."
     #special test for O6,8 
     #merge_O68_list=["Blockley","Bovismorbificans","Hadar","Litchfield","Manhattan","Muenchen"] #remove 11/11/2018, because already in merge list
     #for x in merge_O68_list:
@@ -763,6 +764,8 @@ def decide_O_type_and_get_special_genes(Final_list,Final_list_passed):
       except:
         pass
         #print "$$$No suitable Otype, or failure of mapping (please check the quality of raw reads)"
+  if O_choice=="O-9,46,27" and len(O_list)==2 and "O-4_wzx" in O_list: #special for very low chance sitatuion between O4 and O9,27,46, this is for serotypes like Bredeney and Schwarzengrund (normallly O-4 will have higher score, but sometimes sequencing quality may affect the prediction)
+    O_choice="O-4"
   #print "O:",O_choice,O_nodes_list
   Otypes=[]
   for x in O_list:
@@ -1247,9 +1250,11 @@ def judge_subspecies(fnameA):
       max_score=float(salm_species_scores[i])
       max_score_index=i
   prediction=salm_species_results[max_score_index].split(".")[1].strip().split(" ")[0]
-  if float(out.split("\n")[1].split("\t")[4]) > float(out.split("\n")[1].split("\t")[5]): #bongori and enterica compare
+  #if float(out.split("\n")[1].split("\t")[4]) > float(out.split("\n")[1].split("\t")[5]): #bongori and enterica compare
+  if float(out.split("\n")[1].split("\t")[4]) > 10 and float(out.split("\n")[1].split("\t")[4]) > float(out.split("\n")[1].split("\t")[5]): ## ed_SL_0318: change SalmID_ssp_threshold
     prediction="bongori" #if not, the prediction would always be enterica, since they are located in the later part
-  if max_score<10:
+  #if max_score<10:  ## ed_SL_0318: change SalmID_ssp_threshold
+  if max_score<70:
     prediction="-"
   return prediction
 
@@ -1258,7 +1263,8 @@ def judge_subspecies_Kmer(Special_dict):
   max_score=0
   prediction="-" #default should be I
   for x in Special_dict:
-    if "mer" in x:
+    #if "mer" in x: ## ed_SL_0318: change ssp_threshold
+    if "mer" in x and float(Special_dict[x]) > 70:
       if max_score<float(Special_dict[x]):
         max_score=float(Special_dict[x])
         prediction=x.split("_")[-1].strip()
@@ -1268,21 +1274,29 @@ def judge_subspecies_Kmer(Special_dict):
   return prediction
 
 ## ed_SL_11232019: add notes for missing antigen
-def check_antigens(ssp,O_antigen,H1_antigen,H2_antigen):
-  if O_antigen != '-' and H1_antigen == '-' and H2_antigen == '-':
-    antigen_note = 'H antigens were not detected. This is an atypical result that should be further investigated. Most Salmonella strains have at least fliC, encoding the Phase 1 H antigen, even if it is not expressed. '
-  elif O_antigen != '-' and H1_antigen == '-' and H2_antigen != '-':
-    antigen_note = 'fliC was not detected. This is an atypical result that should be further investigated. Most Salmonella strains have fliC, encoding the Phase 1 H antigen, even if it is not expressed. '
-  elif O_antigen == '-' and H1_antigen != '-':
-    antigen_note = 'O antigen was not detected. This result may be due to a rough strain that has deleted the rfb region. For raw reads input, the k-mer workflow is sometimes more sensitive than the microassembly workflow in detecting O antigen. Caution should be used with this approach because the k-mer result may be due to low levels of contamination. '
-  elif O_antigen == '-' and H1_antigen == '-' and H2_antigen == '-':
-    if ssp != '-':
+def check_antigens(ssp,O_antigen,H1_antigen,H2_antigen,NA_note):
+  antigen_note = ''
+  if ssp != '-':
+    if O_antigen != '-' and H1_antigen == '-' and H2_antigen == '-': # O:-:-
+      antigen_note = 'H antigens were not detected. This is an atypical result that should be further investigated. Most Salmonella strains have at least fliC, encoding the Phase 1 H antigen, even if it is not expressed. '
+      NA_note = ''
+    elif O_antigen != '-' and H1_antigen == '-' and H2_antigen != '-': # O:-:H2
+      antigen_note = 'fliC was not detected. This is an atypical result that should be further investigated. Most Salmonella strains have fliC, encoding the Phase 1 H antigen, even if it is not expressed. '
+      NA_note = ''
+    elif O_antigen == '-' and H1_antigen != '-': # -:H1:X
+      antigen_note = 'O antigen was not detected. This result may be due to a rough strain that has deleted the rfb region. For raw reads input, the k-mer workflow is sometimes more sensitive than the microassembly workflow in detecting O antigen. Caution should be used with this approach because the k-mer result may be due to low levels of contamination. '
+      NA_note = ''
+    elif O_antigen == '-' and H1_antigen == '-' and H2_antigen == '-': # -:-:-
       antigen_note = 'No serotype antigens were detected. This is an atypical result that should be further investigated. '
-    else:
-      antigen_note = 'No serotype antigens were detected; further, this genome was not identified as Salmonella. This is an atypical result that should be further investigated. '
+      NA_note = ''
   else:
-    antigen_note = ''
-  return (antigen_note)
+    antigen_note = 'The input genome cannot be identified as Salmonella. Check the input for taxonomic ID, contamination, or sequencing quality. '
+    NA_note = ''
+#    if [O_antigen, H1_antigen, H2_antigen].count('-') >= 2:
+#      antigen_note = 'No subspecies marker was detected and less than 2 serotype antigens were detected; further, this genome was not identified as Salmonella. This is an atypical result that should be further investigated. '
+#    else:
+#      antigen_note = 'No subspecies marker was detected. This genome may not be Salmonella. This is an atypical result that should be further investigated. '
+  return (antigen_note,NA_note)
 
 def main():
   #combine SeqSeroK and SeqSero2, also with SalmID
@@ -1295,6 +1309,7 @@ def main():
   make_dir=args.d
   clean_mode=args.c
   sample_name=args.n
+  ingore_header=args.s
   k_size=27 #will change for bug fixing
   dirpath = os.path.abspath(os.path.dirname(os.path.realpath(__file__)))
   ex_dir = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)),'seqsero2_db')) # ed_SL_09152019: add ex_dir for packaging
@@ -1328,7 +1343,14 @@ def main():
         current_time=time.strftime("%Y_%m_%d_%H_%M_%S", time.localtime())
         sam,bam,sorted_bam,mapped_fq1,mapped_fq2,combined_fq,for_sai,rev_sai=get_temp_file_names(fnameA,fnameB) #get temp files id
         map_and_sort(threads,database,fnameA,fnameB,sam,bam,for_sai,rev_sai,sorted_bam,mapping_mode) #do mapping and sort
-        xmlfile,new_fasta=extract_mapped_reads_and_do_assembly_and_blast(current_time,sorted_bam,combined_fq,mapped_fq1,mapped_fq2,threads,fnameA,fnameB,database,mapping_mode) #extract the mapped reads and do micro assembly and blast
+        ### avoid error out when micro assembly fails. ed_SL_03172020
+        try:
+          xmlfile,new_fasta=extract_mapped_reads_and_do_assembly_and_blast(current_time,sorted_bam,combined_fq,mapped_fq1,mapped_fq2,threads,fnameA,fnameB,database,mapping_mode) #extract the mapped reads and do micro assembly and blast
+        except (UnboundLocalError, subprocess.CalledProcessError):
+          xmlfile="NA"
+          H1_cont_stat_list=[]
+          H2_cont_stat_list=[]
+        ###
         if xmlfile=="NA":
           O_choice,fliC_choice,fljB_choice,special_gene_list,contamination_O,contamination_H=("-","-","-",[],"","")
         else:
@@ -1363,7 +1385,7 @@ def main():
         ### ed_SL_11232019: add notes for missing antigen
         if O_choice=="":
           O_choice="-"
-        antigen_note=check_antigens(subspecies,O_choice,fliC_choice,fljB_choice)
+        antigen_note,NA_note=check_antigens(subspecies,O_choice,fliC_choice,fljB_choice,NA_note)
         if sample_name:
           print ("Sample name:\t"+sample_name)
         ###
@@ -1373,10 +1395,18 @@ def main():
           make_dir="none-output-directory due to '-c' flag"
         else:
           new_file=open("SeqSero_result.txt","w")
-          
-          ### ed_SL_11232019: add for sample name
+          ### ed_SL_01152020: add new output
+          conta_note="yes" if "inter-serotype contamination" in contamination_report else "no"
+          tsv_file=open("SeqSero_result.tsv","w")
+          if ingore_header:
+            pass
+          else:
+            tsv_file.write("Sample name\tOutput directory\tInput files\tO antigen prediction\tH1 antigen prediction(fliC)\tH2 antigen prediction(fljB)\tPredicted subspecies\tPredicted antigenic profile\tPredicted serotype\tPotential inter-serotype contamination\tNote\n")
           if sample_name:
             new_file.write("Sample name:\t"+sample_name+"\n")
+            tsv_file.write(sample_name+'\t')
+          else:
+            tsv_file.write(input_file[0].split('/')[-1]+'\t')
           ###
           if "N/A" not in predict_sero:
             new_file.write("Output directory:\t"+make_dir+"\n"+
@@ -1388,6 +1418,7 @@ def main():
                            "Predicted antigenic profile:\t"+predict_form+"\n"+
                            "Predicted serotype:\t"+predict_sero+"\n"+
                            note+contamination_report+star_line+claim+antigen_note+"\n")#+##
+            tsv_file.write(make_dir+"\t"+" ".join(input_file)+"\t"+O_choice+"\t"+fliC_choice+"\t"+fljB_choice+"\t"+subspecies+"\t"+predict_form+"\t"+predict_sero+"\t"+conta_note+"\t"+contamination_report+star_line+claim+antigen_note+"\n")
           else:
             #star_line=star_line.strip()+"\tNone such antigenic formula in KW.\n"
             star_line="" #04132019, for new output requirement, diable star_line if "NA" in output
@@ -1398,9 +1429,11 @@ def main():
                            "H2 antigen prediction(fljB):\t"+fljB_choice+"\n"+
                            "Predicted subspecies:\t"+subspecies+"\n"+
                            "Predicted antigenic profile:\t"+predict_form+"\n"+
-                           "Predicted serotype:\t"+predict_form+"\n"+ # add serotype output for "N/A" prediction
+                           "Predicted serotype:\t"+subspecies+' '+predict_form+"\n"+ # add serotype output for "N/A" prediction, add subspecies
                            note+NA_note+contamination_report+star_line+claim+antigen_note+"\n")#+##
+            tsv_file.write(make_dir+"\t"+" ".join(input_file)+"\t"+O_choice+"\t"+fliC_choice+"\t"+fljB_choice+"\t"+subspecies+"\t"+predict_form+"\t"+subspecies+' '+predict_form+"\t"+conta_note+"\t"+NA_note+contamination_report+star_line+claim+antigen_note+"\n")
           new_file.close()
+          tsv_file.close()
           #subprocess.check_call("cat Seqsero_result.txt",shell=True)
           #subprocess.call("rm H_and_O_and_specific_genes.fasta* *.sra *.bam *.sam *.fastq *.gz *.fq temp.txt *.xml "+fnameA+"*_db* 2> /dev/null",shell=True)
           subprocess.call("rm H_and_O_and_specific_genes.fasta* *.sra *.bam *.sam *.fastq *.gz *.fq temp.txt "+fnameA+"*_db* 2> /dev/null",shell=True)
@@ -1423,7 +1456,7 @@ def main():
                 "H2 antigen prediction(fljB):\t"+fljB_choice+"\n"+
                 "Predicted subspecies:\t"+subspecies+"\n"+
                 "Predicted antigenic profile:\t"+predict_form+"\n"+
-                "Predicted serotype:\t"+predict_form+"\n"+ # add serotype output for "N/A" prediction
+                "Predicted serotype:\t"+subspecies+' '+predict_form+"\n"+ # add serotype output for "N/A" prediction, subspecies
                 note+NA_note+contamination_report+star_line+claim+antigen_note+"\n")
       else:
         print("Allele modes only support raw reads datatype, i.e. '-t 1 or 2 or 3'; please use '-m k'")
@@ -1456,7 +1489,7 @@ def main():
         O_choice="-"
       else:
         O_choice=highest_O.split('-')[-1]
-      antigen_note=check_antigens(subspecies,O_choice,highest_fliC,highest_fljB)
+      antigen_note,NA_note=check_antigens(subspecies,O_choice,highest_fliC,highest_fljB,NA_note)
       if sample_name:
         print ("Sample name:\t"+sample_name)
       ###
@@ -1478,9 +1511,17 @@ def main():
         #print("Output_directory:"+make_dir+"\tInput_file:"+input_file+"\tPredicted subpecies:"+subspecies + '\tPredicted antigenic profile:' + predict_form + '\tPredicted serotype(s):' + predict_sero)
         new_file=open("SeqSero_result.txt","w")
         #new_file.write("Output_directory:"+make_dir+"\nInput files:\t"+input_file+"\n"+"O antigen prediction:\t"+O_choice+"\n"+"H1 antigen prediction(fliC):\t"+highest_fliC+"\n"+"H2 antigen prediction(fljB):\t"+highest_fljB+"\n"+"Predicted antigenic profile:\t"+predict_form+"\n"+"Predicted subspecies:\t"+subspecies+"\n"+"Predicted serotype(s):\t"+predict_sero+star+"\n"+star+star_line+claim+"\n")#+##
-        ### ed_SL_11232019: add for sample name
+        ### ed_SL_01152020: add new output
+        tsv_file=open("SeqSero_result.tsv","w")
+        if ingore_header:
+          pass
+        else:
+          tsv_file.write("Sample name\tOutput directory\tInput files\tO antigen prediction\tH1 antigen prediction(fliC)\tH2 antigen prediction(fljB)\tPredicted subspecies\tPredicted antigenic profile\tPredicted serotype\tNote\n")
         if sample_name: 
-            new_file.write("Sample name:\t"+sample_name+"\n")
+          new_file.write("Sample name:\t"+sample_name+"\n")
+          tsv_file.write(sample_name+'\t')
+        else:
+          tsv_file.write(input_file.split('/')[-1]+'\t')
         ###
         if "N/A" not in predict_sero:
           new_file.write("Output directory:\t"+make_dir+"\n"+
@@ -1492,6 +1533,7 @@ def main():
                          "Predicted antigenic profile:\t"+predict_form+"\n"+
                          "Predicted serotype:\t"+predict_sero+"\n"+
                          note+star_line+claim+antigen_note+"\n")#+##
+          tsv_file.write(make_dir+"\t"+input_file+"\t"+O_choice+"\t"+highest_fliC+"\t"+highest_fljB+"\t"+subspecies+"\t"+predict_form+"\t"+predict_sero+"\t"+star_line+claim+antigen_note+"\n")
         else:
           #star_line=star_line.strip()+"\tNone such antigenic formula in KW.\n"
           star_line = "" #changed for new output requirement, 04132019
@@ -1502,9 +1544,11 @@ def main():
                          "H2 antigen prediction(fljB):\t"+highest_fljB+"\n"+
                          "Predicted subspecies:\t"+subspecies+"\n"+
                          "Predicted antigenic profile:\t"+predict_form+"\n"+
-                         "Predicted serotype:\t"+predict_form+"\n"+ # add serotype output for "N/A" prediction
+                         "Predicted serotype:\t"+subspecies+' '+predict_form+"\n"+ # add serotype output for "N/A" prediction, subspecies
                          note+NA_note+star_line+claim+antigen_note+"\n")#+##
+          tsv_file.write(make_dir+"\t"+input_file+"\t"+O_choice+"\t"+highest_fliC+"\t"+highest_fljB+"\t"+subspecies+"\t"+predict_form+"\t"+subspecies+' '+predict_form+"\t"+NA_note+star_line+claim+antigen_note+"\n")
         new_file.close()
+        tsv_file.close()
         subprocess.call("rm *.fasta* *.fastq *.gz *.fq temp.txt *.sra 2> /dev/null",shell=True)
       if "N/A" not in predict_sero:
         print("Output directory:\t"+make_dir+"\n"+
@@ -1524,7 +1568,7 @@ def main():
               "H2 antigen prediction(fljB):\t"+highest_fljB+"\n"+
               "Predicted subspecies:\t"+subspecies+"\n"+
               "Predicted antigenic profile:\t"+predict_form+"\n"+
-              "Predicted serotype:\t"+predict_form+"\n"+ # add serotype output for "N/A" prediction
+              "Predicted serotype:\t"+subspecies+' '+predict_form+"\n"+ # add serotype output for "N/A" prediction, subspecies
               note+NA_note+star_line+claim+antigen_note+"\n")#+##
 
 if __name__ == '__main__':
