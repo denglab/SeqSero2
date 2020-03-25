@@ -1254,7 +1254,7 @@ def judge_subspecies(fnameA):
   if float(out.split("\n")[1].split("\t")[4]) > 10 and float(out.split("\n")[1].split("\t")[4]) > float(out.split("\n")[1].split("\t")[5]): ## ed_SL_0318: change SalmID_ssp_threshold
     prediction="bongori" #if not, the prediction would always be enterica, since they are located in the later part
   #if max_score<10:  ## ed_SL_0318: change SalmID_ssp_threshold
-  if max_score<70:
+  if max_score<60:
     prediction="-"
   return prediction
 
@@ -1264,7 +1264,7 @@ def judge_subspecies_Kmer(Special_dict):
   prediction="-" #default should be I
   for x in Special_dict:
     #if "mer" in x: ## ed_SL_0318: change ssp_threshold
-    if "mer" in x and float(Special_dict[x]) > 70:
+    if "mer" in x and float(Special_dict[x]) > 60:
       if max_score<float(Special_dict[x]):
         max_score=float(Special_dict[x])
         prediction=x.split("_")[-1].strip()
