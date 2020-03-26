@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import sys
+sys.path.insert(1,"..")
 import time
 import random
 import os
@@ -1375,12 +1376,13 @@ def main():
           contamination_report="#Potential inter-serotype contamination detected from both O and H antigen signals.All O-antigens detected:"+"\t".join(Otypes_uniq)+". All H-antigens detected:"+"\t".join(H_list)+"."
         if contamination_report!="":
           #contamination_report="potential inter-serotype contamination detected (please refer below antigen signal report for details)." #above contamination_reports are for back-up and bug fixing #web-based mode need to be re-used, 04132019
-          contamination_report="Co-existence of multiple serotypes detected, indicating potential inter-serotype contamination. See 'Extracted_antigen_alleles.fasta' for detected serotype determinant alleles. "
+          contamination_report="Co-existence of multiple serotypes detected, indicating potential inter-serotype contamination. See below for detected serotype determinant alleles. "
         #claim="\n"+open("Extracted_antigen_alleles.fasta","r").read()#used to store H and O antigen sequeences #04132019, need to change if using web-version
         #if contamination_report+star_line+claim=="": #0413, new output style
         #  note=""
         #else:
         #  note="Note:"
+        seq_content=open("Extracted_antigen_alleles.fasta","r").read()
 
         ### ed_SL_11232019: add notes for missing antigen
         if O_choice=="":
@@ -1417,7 +1419,7 @@ def main():
                            "Predicted subspecies:\t"+subspecies+"\n"+
                            "Predicted antigenic profile:\t"+predict_form+"\n"+
                            "Predicted serotype:\t"+predict_sero+"\n"+
-                           note+contamination_report+star_line+claim+antigen_note+"\n")#+##
+                           note+contamination_report+star_line+claim+antigen_note+"\n"+seq_content)#+##
             tsv_file.write(make_dir+"\t"+" ".join(input_file)+"\t"+O_choice+"\t"+fliC_choice+"\t"+fljB_choice+"\t"+subspecies+"\t"+predict_form+"\t"+predict_sero+"\t"+conta_note+"\t"+contamination_report+star_line+claim+antigen_note+"\n")
           else:
             #star_line=star_line.strip()+"\tNone such antigenic formula in KW.\n"
@@ -1430,7 +1432,7 @@ def main():
                            "Predicted subspecies:\t"+subspecies+"\n"+
                            "Predicted antigenic profile:\t"+predict_form+"\n"+
                            "Predicted serotype:\t"+subspecies+' '+predict_form+"\n"+ # add serotype output for "N/A" prediction, add subspecies
-                           note+NA_note+contamination_report+star_line+claim+antigen_note+"\n")#+##
+                           note+NA_note+contamination_report+star_line+claim+antigen_note+"\n"+seq_content)#+##
             tsv_file.write(make_dir+"\t"+" ".join(input_file)+"\t"+O_choice+"\t"+fliC_choice+"\t"+fljB_choice+"\t"+subspecies+"\t"+predict_form+"\t"+subspecies+' '+predict_form+"\t"+conta_note+"\t"+NA_note+contamination_report+star_line+claim+antigen_note+"\n")
           new_file.close()
           tsv_file.close()
