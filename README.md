@@ -110,8 +110,8 @@ Upon executing the command, a directory named 'SeqSero_result_Time_your_run' wil
 # Citation
 Zhang S, Den-Bakker HC, Li S, Dinsmore BA, Lane C, Lauer AC, Fields PI, Deng X. 
 SeqSero2: rapid and improved Salmonella serotype determination using whole genome sequencing data.
-**Appl Environ Microbiology. 2019 Sep 20. pii: AEM.01746-19. doi: 10.1128/AEM.01746-19. [PMID: 31540993](https://aem.asm.org/content/early/2019/09/17/AEM.01746-19.long) 
+**Appl Environ Microbiology. 2019 Sep; 85(23):e01746-19.** [PMID: 31540993](https://aem.asm.org/content/early/2019/09/17/AEM.01746-19.long) 
 
 Zhang S, Yin Y, Jones MB, Zhang Z, Deatherage Kaiser BL, Dinsmore BA, Fitzgerald C, Fields PI, Deng X.  
 Salmonella serotype determination utilizing high-throughput genome sequencing data.  
-**J Clin Microbiol. 2015 May;53(5):1685-92. [PMID: 25762776](http://jcm.asm.org/content/early/2015/03/05/JCM.00323-15)
+**J Clin Microbiol. 2015 May;53(5):1685-92.** [PMID: 25762776](http://jcm.asm.org/content/early/2015/03/05/JCM.00323-15)
