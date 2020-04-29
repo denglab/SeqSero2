@@ -1324,10 +1324,11 @@ def main():
     request_id += str(random.randint(1, 10000000))
     if make_dir is None:
       make_dir="SeqSero_result_"+request_id
+    make_dir=os.path.abspath(make_dir)
     if os.path.isdir(make_dir):
       pass
     else:
-      subprocess.check_call(["mkdir",make_dir])
+      subprocess.check_call("mkdir -p "+make_dir,shell=True)
     #subprocess.check_call("cp "+dirpath+"/"+database+" "+" ".join(input_file)+" "+make_dir,shell=True)
     #subprocess.check_call("ln -sr "+dirpath+"/"+database+" "+" ".join(input_file)+" "+make_dir,shell=True)
     subprocess.check_call("ln -f -s "+seqsero2_db+" "+" ".join(input_file)+" "+make_dir,shell=True) # ed_SL_11092019: change path to database for packaging 
