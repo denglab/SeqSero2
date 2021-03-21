@@ -1,4 +1,4 @@
-# SeqSero2 v1.1.2
+# SeqSero2 v1.2.1
 Salmonella serotype prediction from genome sequencing data.
 
 Online version: http://www.denglab.info/SeqSero2
