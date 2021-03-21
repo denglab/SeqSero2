@@ -22,7 +22,7 @@ except Exception: #ImportError
 ### SeqSero Kmer
 def parse_args():
     "Parse the input arguments, use '-h' for help."
-    parser = argparse.ArgumentParser(usage='SeqSero2_package.py -t <data_type> -m <mode> -i <input_data> [-d <output_directory>] [-p <number of threads>] [-b <BWA_algorithm>]\n\nDevelopper: Shaokang Zhang (zskzsk@uga.edu), Hendrik C Den-Bakker (Hendrik.DenBakker@uga.edu) and Xiangyu Deng (xdeng@uga.edu)\n\nContact email:seqsero@gmail.com\n\nVersion: v1.1.2')#add "-m <data_type>" in future
+    parser = argparse.ArgumentParser(usage='SeqSero2_package.py -t <data_type> -m <mode> -i <input_data> [-d <output_directory>] [-p <number of threads>] [-b <BWA_algorithm>]\n\nDevelopper: Shaokang Zhang (zskzsk@uga.edu), Hendrik C Den-Bakker (Hendrik.DenBakker@uga.edu) and Xiangyu Deng (xdeng@uga.edu)\n\nContact email:seqsero@gmail.com\n\nVersion: v1.2.1')#add "-m <data_type>" in future
     parser.add_argument("-i",nargs="+",help="<string>: path/to/input_data",type=os.path.abspath)  ### add 'type=os.path.abspath' to generate absolute path of input data.
     parser.add_argument("-t",choices=['1','2','3','4','5'],help="<int>: '1' for interleaved paired-end reads, '2' for separated paired-end reads, '3' for single reads, '4' for genome assembly, '5' for nanopore reads (fasta/fastq)")
     parser.add_argument("-b",choices=['sam','mem'],default="mem",help="<string>: algorithms for bwa mapping for allele mode; 'mem' for mem, 'sam' for samse/sampe; default=mem; optional; for now we only optimized for default 'mem' mode")
@@ -377,7 +377,7 @@ def seqsero_from_formula_to_serotypes(Otype, fliC, fljB, special_gene_list,subsp
         #star_line = "The predicted serotypes share the same general formula:\t" + Otype + ":" + fliC + ":" + fljB + "\n"
     if subspecies_pointer=="1" and len(seronames_none_subspecies)!=0:
       star="*"
-      star_line = "This antigenic profile is recorded as serotype '"+(" or ").join(seronames)+"' in the Kauffman-White scheme. " + star_line  ## ed_SL_08182020: changed for new output format
+      star_line = "This antigenic profile has been associated with serotype '"+(" or ").join(seronames)+"' in the Kauffman-White scheme. The existence of the same antigenic formula in multiple species or subspecies is well documented in the Kauffman-White Scheme. " + star_line  ## ed_SL_03202021: changed for new output format
       #star_line="The predicted O and H antigens correspond to serotype '"+(" or ").join(seronames)+"' in the Kauffmann-White scheme. The predicted subspecies by SalmID (github.com/hcdenbakker/SalmID) may not be consistent with subspecies designation in the Kauffmann-White scheme. " + star_line
       #star_line="The formula with this subspieces prediction can't get a serotype in KW manual, and the serotyping prediction was made without considering it."+star_line
       seronames=["N/A"] ## ed_SL_06062020
@@ -453,7 +453,7 @@ def seqsero_from_formula_to_serotypes(Otype, fliC, fljB, special_gene_list,subsp
             predict_sero = predict_sero.strip()+' var. L(+) tartrate+' if "Paratyphi B" in predict_sero else predict_sero.strip()
             star = "*"
             #star_line = "Didn't detect the SNP for dt- which means this isolate is a Paratyphi B variant L(+) tartrate(+)."
-            star_line = "The SNP in gene STM3356 that is associated with the d-Tartrate nonfermentating phenotype characteristic of the typhoidal pathotype was not detected. "
+            star_line = "The SNP in gene STM3356 that is associated with the d-Tartrate nonfermenting phenotype characteristic of the typhoidal pathotype was not detected. "
         elif normal < mutation:
             #predict_sero = predict_sero.strip() + "(dt-)" #diable special sero for new output requirement, 04132019
             predict_sero = predict_sero.strip()
@@ -494,7 +494,7 @@ def seqsero_from_formula_to_serotypes(Otype, fliC, fljB, special_gene_list,subsp
               star = "*"
               #star_line = "Fail to detect O22 and O23 differences." #diabled for new output requirement, 04132019
     if " or " in predict_sero:
-      star_line = star_line + "The predicted serotypes share the same general formula: " + Otype + ":" + fliC + ":" + fljB + "."
+      star_line = star_line + "The predicted serotypes share the same general formula: " + Otype + ":" + fliC + ":" + fljB + " and can be differentiated by additional analysis. "
     #special test for O6,8 
     #merge_O68_list=["Blockley","Bovismorbificans","Hadar","Litchfield","Manhattan","Muenchen"] #remove 11/11/2018, because already in merge list
     #for x in merge_O68_list:
@@ -1409,7 +1409,7 @@ def main():
         ### ed_SL_08132020: correction VII -> IV, according to CDC's suggestion
         if subspecies == 'VII':
           subspecies = 'IV'
-          note+='SalmID reports it as ssp VII, which has not been formally recognized. '
+          note+='SalmID reports this as ssp VII, which has not been formally recognized. '
         ###
         ### ed_SL_08182020: change serotype ouput for genome without definitive subspecies ID
         ssp_pointer = subspecies
@@ -1539,7 +1539,7 @@ def main():
       ### ed_SL_08132020: correction VII -> IV, according to CDC's suggestion
       if subspecies == 'VII':
         subspecies = 'IV'
-        note+='SalmID reports it as ssp VII, which has not been formally recognized. '
+        note+='SalmID reports this as ssp VII, which has not been formally recognized. '
       ###
       ### ed_SL_08182020: change serotype ouput for genome without definitive subspecies ID
       ssp_pointer = subspecies

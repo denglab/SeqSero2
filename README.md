@@ -1,4 +1,4 @@
-# SeqSero2 v1.1.1
+# SeqSero2 v1.2.1
 Salmonella serotype prediction from genome sequencing data.
 
 Online version: http://www.denglab.info/SeqSero2
@@ -68,7 +68,7 @@ Make sure all SeqSero2 and its dependency executables are added to your path (e.
 
     -m <string> (which workflow to apply, 'a'(raw reads allele micro-assembly), 'k'(raw reads and genome assembly k-mer), default=a)
 
-    -t <string> (input data type, '1' for interleaved paired-end reads, '2' for separated paired-end reads, '3' for single reads, '4' for genome assembly, '5' for nanopore fasta, '6'for nanopore fastq)
+    -t <string> (input data type, '1' for interleaved paired-end reads, '2' for separated paired-end reads, '3' for single reads, '4' for genome assembly, '5' for nanopore reads (fasta/fastq))
 
     -i <file> (/path/to/input/file)
 
