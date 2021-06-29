@@ -32,6 +32,7 @@ def parse_args():
     parser.add_argument("-d",help="<string>: optional, to specify an output directory name, if not set, the output directory would be 'SeqSero_result_'+time stamp+one random number")
     parser.add_argument("-c",action="store_true",help="<flag>: if '-c' was flagged, SeqSero2 will only output serotype prediction without the directory containing log files")
     parser.add_argument("-s",action="store_true",help="<flag>: if '-s' was flagged, SeqSero2 will not output header in SeqSero_result.tsv")
+    parser.add_argument("--phred_offset",choices=['33','64','auto'],default='auto',help="<33|64|auto>: offset for FASTQ file quality scores, default=auto")
     parser.add_argument("--check",action="store_true",help="<flag>: use '--check' flag to check the required dependencies")
     parser.add_argument('-v', '--version', action='version', version='%(prog)s ' + SeqSero2_version)
     return parser.parse_args()
@@ -1200,7 +1201,7 @@ def map_and_sort(threads,database,fnameA,fnameB,sam,bam,for_sai,rev_sai,sorted_b
   else:
     subprocess.check_call("samtools sort -@ "+threads+" -n "+bam+" >"+sorted_bam,shell=True)
 
-def extract_mapped_reads_and_do_assembly_and_blast(current_time,sorted_bam,combined_fq,mapped_fq1,mapped_fq2,threads,fnameA,fnameB,database,mapping_mode):
+def extract_mapped_reads_and_do_assembly_and_blast(current_time,sorted_bam,combined_fq,mapped_fq1,mapped_fq2,threads,fnameA,fnameB,database,mapping_mode,phred_offset):
   #seqsero2 -a; extract, assembly and blast
   subprocess.check_call("bamToFastq -i "+sorted_bam+" -fq "+combined_fq,shell=True)
   #print("fnameA:",fnameA)
@@ -1216,10 +1217,16 @@ def extract_mapped_reads_and_do_assembly_and_blast(current_time,sorted_bam,combi
   else:
     t=threads
   if os.path.getsize(combined_fq)>100 and (fnameB=="" or os.path.getsize(mapped_fq1)>100):#if not, then it's "-:-:-"
-    if fnameB!="":
-      subprocess.check_call("spades.py --careful --pe1-s "+combined_fq+" --pe1-1 "+mapped_fq1+" --pe1-2 "+mapped_fq2+" -t "+t+" -o "+outdir+ " >> data_log.txt 2>&1",shell=True)
+    if phred_offset == 'auto':
+      phred_offset = ''
     else:
-      subprocess.check_call("spades.py --careful --pe1-s "+combined_fq+" -t "+t+" -o "+outdir+ " >> data_log.txt 2>&1",shell=True)
+      phred_offset = '--phred-offset ' + phred_offset
+
+    if fnameB!="":
+      #print("spades.py --careful "+phred_offset+" --pe1-s "+combined_fq+" --pe1-1 "+mapped_fq1+" --pe1-2 "+mapped_fq2+" -t "+t+" -o "+outdir+ " >> data_log.txt 2>&1")
+      subprocess.check_call("spades.py --careful "+phred_offset+" --pe1-s "+combined_fq+" --pe1-1 "+mapped_fq1+" --pe1-2 "+mapped_fq2+" -t "+t+" -o "+outdir+ " >> data_log.txt 2>&1",shell=True)
+    else:
+      subprocess.check_call("spades.py --careful "+phred_offset+" --pe1-s "+combined_fq+" -t "+t+" -o "+outdir+ " >> data_log.txt 2>&1",shell=True)
     new_fasta=fnameA+"_"+database+"_"+mapping_mode+".fasta"
     #new_fasta=fnameA+"_"+database.split('/')[-1]+"_"+mapping_mode+".fasta" # change path to databse for packaging
     subprocess.check_call("mv "+outdir+"/contigs.fasta "+new_fasta+ " 2> /dev/null",shell=True)
@@ -1310,6 +1317,7 @@ def main():
   clean_mode=args.c
   sample_name=args.n
   ingore_header=args.s
+  phred_offset=args.phred_offset
   k_size=27 #will change for bug fixing
   dirpath = os.path.abspath(os.path.dirname(os.path.realpath(__file__)))
   ex_dir = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)),'seqsero2_db')) # ed_SL_09152019: add ex_dir for packaging
@@ -1344,9 +1352,10 @@ def main():
         current_time=time.strftime("%Y_%m_%d_%H_%M_%S", time.localtime())
         sam,bam,sorted_bam,mapped_fq1,mapped_fq2,combined_fq,for_sai,rev_sai=get_temp_file_names(fnameA,fnameB) #get temp files id
         map_and_sort(threads,database,fnameA,fnameB,sam,bam,for_sai,rev_sai,sorted_bam,mapping_mode) #do mapping and sort
+
         ### avoid error out when micro assembly fails. ed_SL_03172020
         try:
-          xmlfile,new_fasta=extract_mapped_reads_and_do_assembly_and_blast(current_time,sorted_bam,combined_fq,mapped_fq1,mapped_fq2,threads,fnameA,fnameB,database,mapping_mode) #extract the mapped reads and do micro assembly and blast
+          xmlfile,new_fasta=extract_mapped_reads_and_do_assembly_and_blast(current_time,sorted_bam,combined_fq,mapped_fq1,mapped_fq2,threads,fnameA,fnameB,database,mapping_mode,phred_offset) #extract the mapped reads and do micro assembly and blast
         except (UnboundLocalError, subprocess.CalledProcessError):
           xmlfile="NA"
           H1_cont_stat_list=[]
