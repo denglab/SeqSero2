@@ -1,5 +1,6 @@
 # SeqSero2s update notes
 1. Convert the sequences of the following alleles to their reverse complement sequences in the SeqSero2 database.
+
 -fliC_b_Wien_CDC_b,d,j__1488
 -fliC_d_from-II-48:d:z6_SRR1168371__1521
 -fliC_a_Salmonella.enterica_from-cdc-Stk2184_other.a__1488
@@ -11,6 +12,7 @@
 -fljB_z6_from-II-48:d:z6_SRR1168371__1503
 
 2. Delete the following alleles from the SeqSero2 database because of the existence of mutations.
+
 -fliC_y_Bareillystr_AOZP01000027_other.y__1508
 -fliC_d_Muenchenstr_ARYW01000085_b,d,j__1496
 -fliC_d_Muenchenstr_ARYX01000110_b,d,j__1488
@@ -19,6 +21,7 @@
 -fljB_1,5_Salmonella.enterica_Rough:r:1,5_AY353281_1__1521
 
 3. Add fliC 1,5,7 allele and fliC 1,2,7 allele to in the SeqSero2 database.
+
 -fliC_1,5,7_Salmonella.enterica_from-cdc-Stk1778_1,5,7_1521
 -fliC_1,2,7_Salmonella.enterica_from-cdc-Stk2293_1,2,7_1521
 
