@@ -1,4 +1,4 @@
-# SeqSero2s
+# SeqSero2s update notes
 1. Convert the sequences of the following alleles to their reverse complement sequences in the SeqSero2 database.
 -fliC_b_Wien_CDC_b,d,j__1488
 -fliC_d_from-II-48:d:z6_SRR1168371__1521
