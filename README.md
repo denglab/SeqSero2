@@ -1,5 +1,4 @@
-# SeqSero2 v1.3.1_SeqSero2s
-Salmonella serotype prediction from genome sequencing data.
+# SeqSero2s
 1. Convert the sequences of the following alleles to their reverse complement sequences in the SeqSero2 database.
 -fliC_b_Wien_CDC_b,d,j__1488
 -fliC_d_from-II-48:d:z6_SRR1168371__1521
@@ -22,6 +21,9 @@ Salmonella serotype prediction from genome sequencing data.
 3. Add fliC 1,5,7 allele and fliC 1,2,7 allele to in the SeqSero2 database.
 -fliC_1,5,7_Salmonella.enterica_from-cdc-Stk1778_1,5,7_1521
 -fliC_1,2,7_Salmonella.enterica_from-cdc-Stk2293_1,2,7_1521
+
+# SeqSero2 v1.3.1
+Salmonella serotype prediction from genome sequencing data.
 
 Online version: http://www.denglab.info/SeqSero2
 
