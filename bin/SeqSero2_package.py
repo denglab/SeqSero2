@@ -22,7 +22,7 @@ except Exception: #ImportError
 ### SeqSero Kmer
 def parse_args():
     "Parse the input arguments, use '-h' for help."
-    parser = argparse.ArgumentParser(usage='SeqSero2_package.py -t <data_type> -m <mode> -i <input_data> [-d <output_directory>] [-p <number of threads>] [-b <BWA_algorithm>]\n\nDevelopper: Shaokang Zhang (zskzsk@uga.edu), Hendrik C Den-Bakker (Hendrik.DenBakker@uga.edu) and Xiangyu Deng (xdeng@uga.edu)\n\nContact email:seqsero@gmail.com\n\nVersion: v1.2.1')#add "-m <data_type>" in future
+    parser = argparse.ArgumentParser(usage='SeqSero2_package.py -t <data_type> -m <mode> -i <input_data> [-d <output_directory>] [-p <number of threads>] [-b <BWA_algorithm>]\n\nDevelopper: Shaokang Zhang (zskzsk@uga.edu), Hendrik C Den-Bakker (Hendrik.DenBakker@uga.edu) and Xiangyu Deng (xdeng@uga.edu)\n\nContact email:seqsero@gmail.com\n\nVersion: v1.3.1')#add "-m <data_type>" in future
     parser.add_argument("-i",nargs="+",help="<string>: path/to/input_data",type=os.path.abspath)  ### add 'type=os.path.abspath' to generate absolute path of input data.
     parser.add_argument("-t",choices=['1','2','3','4','5'],help="<int>: '1' for interleaved paired-end reads, '2' for separated paired-end reads, '3' for single reads, '4' for genome assembly, '5' for nanopore reads (fasta/fastq)")
     parser.add_argument("-b",choices=['sam','mem'],default="mem",help="<string>: algorithms for bwa mapping for allele mode; 'mem' for mem, 'sam' for samse/sampe; default=mem; optional; for now we only optimized for default 'mem' mode")
@@ -738,9 +738,9 @@ def decide_O_type_and_get_special_genes(Final_list,Final_list_passed):
         O2=0
         O9=0
         for z in special_genes:
-          if "tyr-O-9" in z:
+          if "tyr-O-9" in z and special_genes[z] > O9: ##20240322, add "special_genes[z] > O9" to avoid misidentification of O9 to O2 that caused by multiple tyr-O-9 contigs
             O9=special_genes[z]
-          elif "tyr-O-2" in z:
+          elif "tyr-O-2" in z and special_genes[z] > O2: ##20240322, add "special_genes[z] > O2"
             O2=special_genes[z]
         if O2>O9:
           O_choice="O-2"
