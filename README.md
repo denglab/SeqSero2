@@ -25,7 +25,7 @@ Allele micro-assembly workflow depends on:
 
 6. [SRA Toolkit v2.8.0](http://www.ncbi.nlm.nih.gov/Traces/sra/sra.cgi?cmd=show&f=software&m=software&s=software);
 
-7. [SPAdes v3.9.0](http://bioinf.spbau.ru/spades);
+7. [SPAdes v3.15.5](http://bioinf.spbau.ru/spades);
 
 8. [Bedtools v2.17.0](http://bedtools.readthedocs.io/en/latest/);
 
