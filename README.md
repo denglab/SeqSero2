@@ -1,4 +1,4 @@
-# SeqSero2 v1.2.1
+# SeqSero2
 Salmonella serotype prediction from genome sequencing data.
 
 Online version: http://www.denglab.info/SeqSero2
@@ -46,7 +46,7 @@ Raw reads k-mer workflow (originally SeqSeroK) depends on:
 ### Conda
 To install the latest SeqSero2 Conda package (recommended):  
 ```
-conda install -c bioconda seqsero2=1.2.1
+conda install -c bioconda seqsero2=1.3.1
 ```
 ### Git
 To install the SeqSero2 git repository locally:
