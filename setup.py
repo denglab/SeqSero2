@@ -24,7 +24,7 @@ setup(name='SeqSero2',
     scripts=["bin/deinterleave_fastq.sh","bin/Initial_Conditions.py","bin/SeqSero2_package.py","bin/SeqSero2_update_kmer_database.py"],
     packages=[""],
     include_package_data = True,
-    install_requires=['biopython==1.73'],
+    install_requires=['biopython~=1.73'],
     data_files=[("seqsero2_db",["seqsero2_db/antigens.pickle","seqsero2_db/H_and_O_and_specific_genes.fasta","seqsero2_db/invA_mers_dict","seqsero2_db/special.pickle"])],
     zip_safe=False,
 )

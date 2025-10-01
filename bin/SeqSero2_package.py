@@ -22,7 +22,7 @@ except Exception: #ImportError
 ### SeqSero Kmer
 def parse_args():
     "Parse the input arguments, use '-h' for help."
-    parser = argparse.ArgumentParser(usage='SeqSero2_package.py -t <data_type> -m <mode> -i <input_data> [-d <output_directory>] [-p <number of threads>] [-b <BWA_algorithm>]\n\nDevelopper: Shaokang Zhang (zskzsk@uga.edu), Hendrik C Den-Bakker (Hendrik.DenBakker@uga.edu) and Xiangyu Deng (xdeng@uga.edu)\n\nContact email:seqsero@gmail.com\n\nVersion: v1.3.1')#add "-m <data_type>" in future
+    parser = argparse.ArgumentParser(usage='SeqSero2_package.py -t <data_type> -m <mode> -i <input_data> [-d <output_directory>] [-p <number of threads>] [-b <BWA_algorithm>]\n\nDevelopper: Shaokang Zhang (zskzsk@uga.edu), Hendrik C Den-Bakker (Hendrik.DenBakker@uga.edu) and Xiangyu Deng (xdeng@uga.edu)\n\nContact email:seqsero@gmail.com\n\nVersion: v1.3.2')#add "-m <data_type>" in future
     parser.add_argument("-i",nargs="+",help="<string>: path/to/input_data",type=os.path.abspath)  ### add 'type=os.path.abspath' to generate absolute path of input data.
     parser.add_argument("-t",choices=['1','2','3','4','5'],help="<int>: '1' for interleaved paired-end reads, '2' for separated paired-end reads, '3' for single reads, '4' for genome assembly, '5' for nanopore reads (fasta/fastq)")
     parser.add_argument("-b",choices=['sam','mem'],default="mem",help="<string>: algorithms for bwa mapping for allele mode; 'mem' for mem, 'sam' for samse/sampe; default=mem; optional; for now we only optimized for default 'mem' mode")
@@ -1209,11 +1209,13 @@ def map_and_sort(threads,database,fnameA,fnameB,sam,bam,for_sai,rev_sai,sorted_b
 
 def extract_mapped_reads_and_do_assembly_and_blast(current_time,sorted_bam,combined_fq,mapped_fq1,mapped_fq2,threads,fnameA,fnameB,database,mapping_mode,phred_offset):
   #seqsero2 -a; extract, assembly and blast
-  subprocess.check_call("bamToFastq -i "+sorted_bam+" -fq "+combined_fq,shell=True)
+  #subprocess.check_call("bamToFastq -i "+sorted_bam+" -fq "+combined_fq,shell=True)
+  subprocess.check_call("samtools bam2fq "+sorted_bam+" > "+combined_fq+" 2>> data_log.txt",shell=True) ## change to samtools bam2fq. 202509
   #print("fnameA:",fnameA)
   #print("fnameB:",fnameB)
   if fnameB!="":
-    subprocess.check_call("bamToFastq -i "+sorted_bam+" -fq "+mapped_fq1+" -fq2 "+mapped_fq2 + " 2>> data_log.txt",shell=True)#2> /dev/null if want no output
+    #subprocess.check_call("bamToFastq -i "+sorted_bam+" -fq "+mapped_fq1+" -fq2 "+mapped_fq2 + " 2>> data_log.txt",shell=True)#2> /dev/null if want no output
+    subprocess.check_call("samtools bam2fq -1 "+mapped_fq1+" -2 "+mapped_fq2+" -0 /dev/null -s /dev/null -n "+sorted_bam+" 2>> data_log.txt",shell=True) ## change to samtools bam2fq. 202509
   else:
     pass
   outdir=current_time+"_temp"
