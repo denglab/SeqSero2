@@ -1,6 +1,6 @@
 # SeqSero2 software issue review (2026-11-07)
 
-This local patch was evaluated against baseline commit ff1dce923159fe6a7a0ea2ff24cf1ddb2000071a (v1.3.2). It is not a published release. The separate issue-by-issue report includes all 50 issues and comments (25 open, 25 closed), drafted replies and status recommendations; no comments or issue statuses were changed.
+The v1.4.0 preparation includes the local patch evaluated against baseline commit ff1dce923159fe6a7a0ea2ff24cf1ddb2000071a (v1.3.2). It is not a published release. The separate issue-by-issue report includes all 50 issues and comments (25 open, 25 closed), drafted replies and status recommendations; no comments or issue statuses were changed.
 
 ## Changes
 
@@ -31,3 +31,7 @@ Native macOS ARM64, Python 3.12.16, Biopython 1.88, BWA 0.7.19, samtools 1.25, B
 The supplied issue #56 BLAST fragments select e,n,z15 in the current decision code; the original raw-input misclassification is unverified. The O2:g,m:-/Enteritidis compatibility mapping in #52 is reproduced but unchanged. New subspecies references (#60), private inputs and mixture interpretations require further data/curation. Keep those issues open. The external exact Biopython/bedtools recipe pins (#35/#59/#61) require a separate Bioconda update and rebuilt package.
 
 Prepared source fixes should only be treated as released after merge/release and deployment verification. A passing workflow does not establish correct phenotype or universal serotype accuracy.
+
+## v1.4.0 preparation
+
+Version metadata and the CLI are set to 1.4.0. The README now documents the major updates, including ST28 behavior, cohort results and remaining limits. Relative to the fully validated patch, the caller changes only its version constant and the reference files are unchanged. The 123-execution dataset above validates that algorithm/reference revision; fresh release checks validate the 1.4.0 wheel, source archive, installed CLI and selected real-data workflows. This documentation does not imply that a GitHub tag, GitHub release or rebuilt Bioconda package has been published.

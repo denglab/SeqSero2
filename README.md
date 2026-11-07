@@ -6,6 +6,34 @@ Online version: http://www.denglab.info/SeqSero2
 # Introduction 
 SeqSero2 is a pipeline for Salmonella serotype prediction from raw sequencing reads or genome assemblies
 
+# Major updates
+
+## v1.4.0
+
+### Paratyphi B ST28 tartrate-variant classification
+
+Corrects the k-mer misclassification reported in [issue #58](https://github.com/denglab/SeqSero2/issues/58). Five sequence differences in the ST28 marker context prevented the original probes from providing discriminating 27-mer evidence. The updated reference includes a positive context probe recovered from public ST28 assemblies and a matched negative probe carrying the discriminating SNP. The negative context probe is a designed counterpart, not a naturally sampled ST28 tartrate-negative isolate.
+
+Both original and added probes are scored. The caller compares the strongest positive and strongest negative evidence; probe use does not require ST28 or MLST detection. Missing or tied evidence is reported as `Paratyphi B (tartrate variant unresolved)`.
+
+Validation included all 18 reported public read libraries (16 EnteroBase uberstrain identifiers) and 15 accessible matched assemblies. All 18 read k-mer and 15 assembly k-mer predictions changed from plain Paratyphi B to `Paratyphi B var. L(+) tartrate+`; all 18 patched microassembly cases were positive. Six non-ST28 controls spanning three positive contexts and three negative-marker variants retained their expected calls in both modes. These tests assess a defined cohort, not universal phenotype accuracy.
+
+### Workflow reliability and crash fixes
+
+- Fixes the empty-primary-O-list crash in [#43](https://github.com/denglab/SeqSero2/issues/43) and [#54](https://github.com/denglab/SeqSero2/issues/54). The full cited libraries now complete with unresolved O evidence; the fix does not invent a missing antigen.
+- Corrects the false contamination warning when a partial O9,46 wzy marker accompanies its wbaV marker ([#45](https://github.com/denglab/SeqSero2/issues/45)); distinct O families still trigger the warning.
+- Handles spaces and shell metacharacters in installation, input and output paths using literal tool arguments and safe temporary work paths ([#50](https://github.com/denglab/SeqSero2/issues/50)).
+- Validates required input types and readable files before creating output, preserves existing directories, and returns a failure when an external tool fails rather than reporting a successful antigen-negative result.
+
+### Installation and reporting
+
+- Removes runtime/build dependence on distutils and supports a modern setuptools wheel. Python >=3.8 and Biopython >=1.75 are declared; actual local testing used Python 3.12.16/Biopython 1.88 on native macOS ARM64.
+- Documents dependencies by workflow and includes seqtk in `--check`. Bedtools is not called by the current pipeline; `samtools bam2fq` was already present before this update.
+- Adds `SeqSero2_summarize.py` to combine TSV reports by column name ([#40](https://github.com/denglab/SeqSero2/issues/40)), and retains both submitted mate paths in input provenance while preserving the forward-read k-mer sampling policy.
+- Provides a proposed Conda recipe. Updating this repository does not rebuild published Bioconda packages; external recipe pins still require a separate update.
+
+See [validation and remaining limitations](docs/ISSUE_REVIEW.md) and the [issue-by-issue reply drafts](docs/ISSUE_REPLIES_V1.4.0.md). The v1.4.0 release preparation retains the prior 123-execution validation dataset, including 86 successful patched-source cases and 38 passing regression tests. Release-specific wheel/version and installed-data checks are recorded separately.
+
 # Dependencies and installation
 
 Python >=3.8 and Biopython >=1.75 are required. Biopython 1.74 has a historical BLAST XML parser problem; it is excluded by the minimum version. The validation report records tested versions rather than implying that every version above a minimum was tested.
