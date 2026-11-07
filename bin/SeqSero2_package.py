@@ -10,23 +10,32 @@ import io
 import pickle
 import argparse
 import itertools
-from distutils.version import LooseVersion
-from distutils.spawn import find_executable
+import re
+import shutil
+import tempfile
+from contextlib import contextmanager
 sys.path.insert(1,sys.path[0]+'/..')
 
-try:
-    from .version import SeqSero2_version
-except Exception: #ImportError
-    from version import SeqSero2_version
+SeqSero2_version = "1.4.0"
 
 ### SeqSero Kmer
-def parse_args():
+def positive_integer(value):
+    try:
+        number = int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError("must be a positive integer")
+    if number < 1:
+        raise argparse.ArgumentTypeError("must be a positive integer")
+    return number
+
+
+def parse_args(argv=None):
     "Parse the input arguments, use '-h' for help."
-    parser = argparse.ArgumentParser(usage='SeqSero2_package.py -t <data_type> -m <mode> -i <input_data> [-d <output_directory>] [-p <number of threads>] [-b <BWA_algorithm>]\n\nDevelopper: Shaokang Zhang (zskzsk@uga.edu), Hendrik C Den-Bakker (Hendrik.DenBakker@uga.edu) and Xiangyu Deng (xdeng@uga.edu)\n\nContact email:seqsero@gmail.com\n\nVersion: v1.3.2')#add "-m <data_type>" in future
+    parser = argparse.ArgumentParser(usage='SeqSero2_package.py -t <data_type> -m <mode> -i <input_data> [-d <output_directory>] [-p <number of threads>] [-b <BWA_algorithm>]\n\nDevelopper: Shaokang Zhang (zskzsk@uga.edu), Hendrik C Den-Bakker (Hendrik.DenBakker@uga.edu) and Xiangyu Deng (xdeng@uga.edu)\n\nContact email:seqsero@gmail.com\n\n')#add "-m <data_type>" in future
     parser.add_argument("-i",nargs="+",help="<string>: path/to/input_data",type=os.path.abspath)  ### add 'type=os.path.abspath' to generate absolute path of input data.
     parser.add_argument("-t",choices=['1','2','3','4','5'],help="<int>: '1' for interleaved paired-end reads, '2' for separated paired-end reads, '3' for single reads, '4' for genome assembly, '5' for nanopore reads (fasta/fastq)")
     parser.add_argument("-b",choices=['sam','mem'],default="mem",help="<string>: algorithms for bwa mapping for allele mode; 'mem' for mem, 'sam' for samse/sampe; default=mem; optional; for now we only optimized for default 'mem' mode")
-    parser.add_argument("-p",default="1",help="<int>: number of threads for allele mode, if p >4, only 4 threads will be used for assembly since the amount of extracted reads is small, default=1")
+    parser.add_argument("-p",type=positive_integer,default=1,help="<int>: number of threads for allele mode, if p >4, only 4 threads will be used for assembly since the amount of extracted reads is small, default=1")
     parser.add_argument("-m",choices=['k','a'],default="a",help="<string>: which workflow to apply, 'a'(raw reads allele micro-assembly), 'k'(raw reads and genome assembly k-mer), default=a")
     parser.add_argument("-n",help="<string>: optional, to specify a sample name in the report output")
     parser.add_argument("-d",help="<string>: optional, to specify an output directory name, if not set, the output directory would be 'SeqSero_result_'+time stamp+one random number")
@@ -34,21 +43,90 @@ def parse_args():
     parser.add_argument("-s",action="store_true",help="<flag>: if '-s' was flagged, SeqSero2 will not output header in SeqSero_result.tsv")
     parser.add_argument("--phred_offset",choices=['33','64','auto'],default='auto',help="<33|64|auto>: offset for FASTQ file quality scores, default=auto")
     parser.add_argument("--check",action="store_true",help="<flag>: use '--check' flag to check the required dependencies")
-    parser.add_argument('-v', '--version', action='version', version='%(prog)s ' + SeqSero2_version)
-    return parser.parse_args()
+    parser.add_argument('-v', '--version', action='version', version=f"%(prog)s {SeqSero2_version}")
+    args = parser.parse_args(argv)
+    if args.check:
+        return args
+    if argv == [] or (argv is None and len(sys.argv) == 1):
+        parser.print_help()
+        parser.exit()
+    if not args.i or not args.t:
+        parser.error("-i and -t are required")
+    expected = 2 if args.t == '2' else 1
+    if len(args.i) != expected:
+        parser.error("input type %s requires exactly %s input file(s)" % (args.t, expected))
+    for path in args.i:
+        if not os.path.isfile(path):
+            parser.error("input file does not exist or is not a file: %s" % path)
+    for path in args.i:
+        if path.endswith('.sra'):
+            continue
+        opener = gzip.open if path.endswith('.gz') else open
+        with opener(path, 'rt') as source:
+            first = source.readline()
+        expected_headers = ('>',) if args.t == '4' else ('>', '@') if args.t == '5' else ('@',)
+        if not first.startswith(expected_headers):
+            parser.error("input format does not match -t %s: %s" % (args.t, path))
+    if args.m == 'a' and args.t not in ['1', '2', '3']:
+        parser.error("allele mode supports only -t 1, 2, or 3; use -m k")
+    names = [os.path.basename(path) for path in args.i]
+    reserved_names = {'H_and_O_and_specific_genes.fasta', 'data_log.txt', 'mlst.json',
+                      'stringMLST.txt', 'SeqSero_log.txt', 'SeqSero_result.txt',
+                      'SeqSero_result.tsv', 'Extracted_antigen_alleles.fasta', 'blasted_output.xml'}
+    if len(set(names)) != len(names) or reserved_names.intersection(names):
+        parser.error("input files must have distinct names and must not use a reserved output filename")
+    return args
 
-### check paths of dependencies
-check_dependencies = parse_args().check
-dependencies = ['bwa','samtools','blastn','fastq-dump','spades.py','bedtools','SalmID.py']
-if check_dependencies:
+dependencies = ['bwa','samtools','blastn','makeblastdb','fastq-dump','spades.py','SalmID.py','seqtk']
+
+def check_dependencies():
+    missing = False
     for item in dependencies:
-        ext_path = find_executable(item)
+        ext_path = shutil.which(item)
         if ext_path is not None:
             print ("Using "+item+" - "+ext_path)
         else:
             print ("ERROR: can not find "+item+" in PATH")
-    sys.exit()
-### end of --check
+            missing = True
+    return int(missing)
+
+
+def run_command(args, stdout=None, log="data_log.txt"):
+    """Run a tool with literal arguments and record diagnostics."""
+    with open(log, "ab") as log_file:
+        if stdout is None:
+            subprocess.check_call(args, stdout=log_file, stderr=log_file)
+        else:
+            with open(stdout, "wb") as output:
+                subprocess.check_call(args, stdout=output, stderr=log_file)
+
+
+@contextmanager
+def working_directory(path):
+    previous = os.getcwd()
+    os.chdir(path)
+    try:
+        yield
+    finally:
+        os.chdir(previous)
+
+
+def prepare_output_directory(path, sources):
+    """Create a new run directory without replacing any existing user files."""
+    os.makedirs(path)
+    for source in sources:
+        os.symlink(source, os.path.join(path, os.path.basename(source)))
+
+
+def remove_temporary_files(patterns):
+    # Match literal filename prefixes before globbing, so metacharacters in an
+    # input filename cannot broaden cleanup to unrelated files.
+    import glob
+    for pattern in patterns:
+        for path in glob.glob(pattern):
+            if os.path.islink(path) or os.path.isfile(path):
+                os.unlink(path)
+
 
 def reverse_complement(sequence):
     complement = {
@@ -150,7 +228,9 @@ def target_multifasta_kmerizer(multifasta, k, kmerDict):
                 if i + reverse_lines <= len(multifasta_list) - 1:
                     end_num = i + reverse_lines
                 else:
-                    end_num = len(multifasta_list) - 1
+                    # end_num is exclusive in the slice below. Include the
+                    # terminal chunk, including markers on short contigs.
+                    end_num = len(multifasta_list)
                 target_list = [
                     x.strip() for x in multifasta_list[start_num:end_num]
                 ]
@@ -168,27 +248,21 @@ def target_read_kmerizer(file, k, kmerDict):
     n_reads = 0
     total_coverage = 0
     target_mers = []
-    if file.endswith(".gz"):
-        file_content = io.BufferedReader(gzip.open(file))
-    else:
-        file_content = open(file, "r").readlines()
-    for line in file_content:
-        start = int((len(line) - k) // 2)
-        if i % 4 == 2:
-            if file.endswith(".gz"):
-                s1 = line[start:k + start].decode()
-                line = line.decode()
-            else:
+    opener = gzip.open if file.endswith(".gz") else open
+    with opener(file, "rt") as file_content:
+        for line in file_content:
+            start = int((len(line) - k) // 2)
+            if i % 4 == 2:
                 s1 = line[start:k + start]
-            if s1 in kmerDict:  #detect it is a potential read or not (use the middle part)
-                n_reads += 1
-                total_coverage += len(line)
-                target_mers += [
-                    k1 for k1 in createKmerDict_reads([str(line)], k)
-                ]  #changed k to k1, just want to avoid the mixes of this "k" (kmer) to the "k" above (kmer length)
-        i += 1
-        if total_coverage >= 4000000:
-            break
+                if s1 in kmerDict:  #detect it is a potential read or not (use the middle part)
+                    n_reads += 1
+                    total_coverage += len(line)
+                    target_mers += [
+                        k1 for k1 in createKmerDict_reads([str(line)], k)
+                    ]  #changed k to k1, just want to avoid the mixes of this "k" (kmer) to the "k" above (kmer length)
+            i += 1
+            if total_coverage >= 4000000:
+                break
     return set(target_mers)
 
 
@@ -445,9 +519,9 @@ def seqsero_from_formula_to_serotypes(Otype, fliC, fljB, special_gene_list,subsp
         mutation = 0
         for x in special_gene_list:
             if "gntR-family-regulatory-protein_dt-positive" in x:
-                normal = float(special_gene_list[x])
+                normal = max(normal, float(special_gene_list[x]))
             elif "gntR-family-regulatory-protein_dt-negative" in x:
-                mutation = float(special_gene_list[x])
+                mutation = max(mutation, float(special_gene_list[x]))
         #print(normal,mutation)
         if normal > mutation:
             #predict_sero = predict_sero.strip() + "(dt+)" #diable special sero for new output requirement, 04132019
@@ -463,8 +537,9 @@ def seqsero_from_formula_to_serotypes(Otype, fliC, fljB, special_gene_list,subsp
             star_line = "Detected the SNP in gene STM3356 that is associated with the d-Tartrate nonfermenting phenotype characteristic of the typhoidal pathotype. "
         else:
             star = "*"
-            #star_line = " Failed to detect the SNP for dt-, can't decide it's a Paratyphi B variant L(+) tartrate(+) or not."
-            star_line = " " ## ed_SL_05152019: do not report this situation.
+            if "Paratyphi B" in predict_sero:
+                predict_sero += " (tartrate variant unresolved)"
+            star_line = "Unable to distinguish the Paratyphi B tartrate variants: STM3356 marker evidence is missing or tied. "
     #special test for O13,22 and O13,23
     if Otype=="13":
       #ex_dir = os.path.dirname(os.path.realpath(__file__))
@@ -712,7 +787,7 @@ def decide_O_type_and_get_special_genes(Final_list,Final_list_passed):
       final_O.append(potenial_new_gene)
   ### end of the two genes on same contig test
   final_O=sorted(final_O,key=lambda x: x[2], reverse=True)#sorted
-  if len(final_O)==0 or (len(final_O)==1 and "O-1,3,19_not_in_3,10" in final_O[0][0]):
+  if not any("O-1,3,19_not_in_3,10" not in x[0] for x in final_O):
     #print "$$$No Otype, due to no hit"#may need to be changed
     O_choice="-"
   else:
@@ -779,7 +854,7 @@ def decide_O_type_and_get_special_genes(Final_list,Final_list_passed):
       if "O-9,46_" not in x:
         Otypes.append(x.split("_")[0])
       else:
-        Otypes.append(x.split("-from")[0])#O-9,46_wbaV-from-II-9,12:z29:1,5-SRR1346254
+        Otypes.append(x.split("-from")[0].replace("O-9,46_wzy_partial", "O-9,46_wzy"))
   #Otypes=[x.split("_")[0] for x in O_list if x!="O-1,3,19_not_in_3,10"]
   Otypes_uniq,Otypes_fre=Uniq(Otypes)
   contamination_O=""
@@ -802,35 +877,40 @@ def get_input_files(make_dir,input_file,data_type,dirpath):
   #"<int>: '1'(pair-end reads, interleaved),'2'(pair-end reads, seperated),'3'(single-end reads), '4'(assembly),'5'(nanopore fasta),'6'(nanopore fastq)"
   for_fq=""
   rev_fq=""
-  os.chdir(make_dir)
-  if data_type=="1":
-    input_file=input_file[0].split("/")[-1]
-    if input_file.endswith(".sra"):
-      subprocess.check_call("fastq-dump --split-files "+input_file,shell=True)
-      for_fq=input_file.replace(".sra","_1.fastq")
-      rev_fq=input_file.replace(".sra","_2.fastq")
-    else:
-      core_id=input_file.split(".fastq")[0].split(".fq")[0]
-      for_fq=core_id+"_1.fastq"
-      rev_fq=core_id+"_2.fastq"
-      if input_file.endswith(".gz"):
-        subprocess.check_call("gzip -dc "+input_file+" | "+dirpath+"/deinterleave_fastq.sh "+for_fq+" "+rev_fq,shell=True)
+  with working_directory(make_dir):
+    if data_type=="1":
+      input_file=input_file[0].split("/")[-1]
+      if input_file.endswith(".sra"):
+        run_command(["fastq-dump", "--split-files", input_file])
+        for_fq=input_file.replace(".sra","_1.fastq")
+        rev_fq=input_file.replace(".sra","_2.fastq")
       else:
-        subprocess.check_call("cat "+input_file+" | "+dirpath+"/deinterleave_fastq.sh "+for_fq+" "+rev_fq,shell=True)
-  elif data_type=="2":
-    for_fq=input_file[0].split("/")[-1]
-    rev_fq=input_file[1].split("/")[-1]
-  elif data_type=="3":
-    input_file=input_file[0].split("/")[-1]
-    if input_file.endswith(".sra"):
-      subprocess.check_call("fastq-dump --split-files "+input_file,shell=True)
-      for_fq=input_file.replace(".sra","_1.fastq")
-    else:
-      for_fq=input_file
-  elif data_type in ["4","5","6"]:
-    for_fq=input_file[0].split("/")[-1]
-  os.chdir("..")
-  return for_fq,rev_fq
+        core_id=input_file.split(".fastq")[0].split(".fq")[0]
+        for_fq=core_id+"_1.fastq"
+        rev_fq=core_id+"_2.fastq"
+        opener = gzip.open if input_file.endswith(".gz") else open
+        with opener(input_file, "rt") as source, open(for_fq, "w") as forward, open(rev_fq, "w") as reverse:
+          while True:
+            pair = list(itertools.islice(source, 8))
+            if not pair:
+              break
+            if len(pair) != 8:
+              raise ValueError("interleaved FASTQ must contain complete pairs of four-line records")
+            forward.writelines(pair[:4])
+            reverse.writelines(pair[4:])
+    elif data_type=="2":
+      for_fq=input_file[0].split("/")[-1]
+      rev_fq=input_file[1].split("/")[-1]
+    elif data_type=="3":
+      input_file=input_file[0].split("/")[-1]
+      if input_file.endswith(".sra"):
+        run_command(["fastq-dump", "--split-files", input_file])
+        for_fq=input_file.replace(".sra","_1.fastq")
+      else:
+        for_fq=input_file
+    elif data_type in ["4","5","6"]:
+      for_fq=input_file[0].split("/")[-1]
+  return os.path.join(".", for_fq), os.path.join(".", rev_fq) if rev_fq else ""
 
 def predict_O_and_H_types(Final_list,Final_list_passed,new_fasta):
   #get O and H types from Final_list from blast parsing; allele mode
@@ -1037,6 +1117,8 @@ def predict_O_and_H_types(Final_list,Final_list_passed,new_fasta):
 
 def get_input_K(input_file,lib_dict,data_type,k_size):
   #kmer mode; get input_Ks from dict and data_type
+  if data_type not in ["1", "2", "3", "4", "5", "6"]:
+      raise ValueError("a valid input type is required (use -t 4 for an assembly)")
   kmers = []
   for h in lib_dict:
       kmers += lib_dict[h]
@@ -1181,82 +1263,93 @@ def get_temp_file_names(for_fq,rev_fq):
   return sam,bam,sorted_bam,mapped_fq1,mapped_fq2,combined_fq,for_sai,rev_sai
 
 def map_and_sort(threads,database,fnameA,fnameB,sam,bam,for_sai,rev_sai,sorted_bam,mapping_mode):
-  #seqsero2 -a; do mapping and sort
+  # Keep the mapping parameters unchanged; pass filenames as literal arguments.
+  threads = str(threads)
   print("building database...")
-  subprocess.check_call("bwa index "+database+ " 2>> data_log.txt",shell=True)
+  run_command(["bwa", "index", database])
   print("mapping...")
-  if mapping_mode=="mem":
-    subprocess.check_call("bwa mem -k 17 -t "+threads+" "+database+" "+fnameA+" "+fnameB+" > "+sam+ " 2>> data_log.txt",shell=True)
-  elif mapping_mode=="sam":
-    if fnameB!="":
-      subprocess.check_call("bwa aln -t "+threads+" "+database+" "+fnameA+" > "+for_sai+ " 2>> data_log.txt",shell=True)
-      subprocess.check_call("bwa aln -t "+threads+" "+database+" "+fnameB+" > "+rev_sai+ " 2>> data_log.txt",shell=True)
-      subprocess.check_call("bwa sampe "+database+" "+for_sai+" "+ rev_sai+" "+fnameA+" "+fnameB+" > "+sam+ " 2>> data_log.txt",shell=True)
+  if mapping_mode == "mem":
+    reads = [fnameA, fnameB] if fnameB else [fnameA]
+    run_command(["bwa", "mem", "-k", "17", "-t", threads, database] + reads, stdout=sam)
+  elif mapping_mode == "sam":
+    run_command(["bwa", "aln", "-t", threads, database, fnameA], stdout=for_sai)
+    if fnameB:
+      run_command(["bwa", "aln", "-t", threads, database, fnameB], stdout=rev_sai)
+      run_command(["bwa", "sampe", database, for_sai, rev_sai, fnameA, fnameB], stdout=sam)
     else:
-      subprocess.check_call("bwa aln -t "+threads+" "+database+" "+fnameA+" > "+for_sai+ " 2>> data_log.txt",shell=True)
-      subprocess.check_call("bwa samse "+database+" "+for_sai+" "+for_fq+" > "+sam)
-  subprocess.check_call("samtools view -@ "+threads+" -F 4 -Sh "+sam+" > "+bam,shell=True)
-  ### check the version of samtools then use differnt commands
-  samtools_version=subprocess.Popen(["samtools"],stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-  out, err = samtools_version.communicate()
-  version = str(err).split("ersion:")[1].strip().split(" ")[0].strip()
-  print("check samtools version:",version)
-  ### end of samtools version check and its analysis
-  if LooseVersion(version)<=LooseVersion("1.2"):
-    subprocess.check_call("samtools sort -@ "+threads+" -n "+bam+" "+fnameA+"_sorted",shell=True)
+      run_command(["bwa", "samse", database, for_sai, fnameA], stdout=sam)
+  run_command(["samtools", "view", "-@", threads, "-F", "4", "-Sh", sam], stdout=bam)
+  version_output = subprocess.run(["samtools"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+  match = re.search(r"Version:\s*(\d+(?:\.\d+)+)", version_output.stderr.decode("utf-8", errors="replace"))
+  if match is None:
+    raise RuntimeError("could not determine samtools version")
+  version = tuple(map(int, match.group(1).split(".")))
+  print("check samtools version:", match.group(1))
+  if version <= (1, 2):
+    run_command(["samtools", "sort", "-@", threads, "-n", bam, fnameA + "_sorted"])
   else:
-    subprocess.check_call("samtools sort -@ "+threads+" -n "+bam+" >"+sorted_bam,shell=True)
+    run_command(["samtools", "sort", "-@", threads, "-n", bam], stdout=sorted_bam)
 
 def extract_mapped_reads_and_do_assembly_and_blast(current_time,sorted_bam,combined_fq,mapped_fq1,mapped_fq2,threads,fnameA,fnameB,database,mapping_mode,phred_offset):
   #seqsero2 -a; extract, assembly and blast
-  #subprocess.check_call("bamToFastq -i "+sorted_bam+" -fq "+combined_fq,shell=True)
-  subprocess.check_call("samtools bam2fq "+sorted_bam+" > "+combined_fq+" 2>> data_log.txt",shell=True) ## change to samtools bam2fq. 202509
+  new_fasta = None
+  run_command(["samtools", "bam2fq", sorted_bam], stdout=combined_fq)
   #print("fnameA:",fnameA)
   #print("fnameB:",fnameB)
   if fnameB!="":
-    #subprocess.check_call("bamToFastq -i "+sorted_bam+" -fq "+mapped_fq1+" -fq2 "+mapped_fq2 + " 2>> data_log.txt",shell=True)#2> /dev/null if want no output
-    subprocess.check_call("samtools bam2fq -1 "+mapped_fq1+" -2 "+mapped_fq2+" -0 /dev/null -s /dev/null -n "+sorted_bam+" 2>> data_log.txt",shell=True) ## change to samtools bam2fq. 202509
+    run_command(["samtools", "bam2fq", "-1", mapped_fq1, "-2", mapped_fq2, "-0", os.devnull, "-s", os.devnull, "-n", sorted_bam])
   else:
     pass
-  outdir=current_time+"_temp"
   print("assembling...")
   if int(threads)>4:
     t="4"
   else:
     t=threads
   if os.path.getsize(combined_fq)>100 and (fnameB=="" or os.path.getsize(mapped_fq1)>100):#if not, then it's "-:-:-"
-    if phred_offset == 'auto':
-      phred_offset = ''
-    else:
-      phred_offset = '--phred-offset ' + phred_offset
-
-    if fnameB!="":
-      #print("spades.py --careful "+phred_offset+" --pe1-s "+combined_fq+" --pe1-1 "+mapped_fq1+" --pe1-2 "+mapped_fq2+" -t "+t+" -o "+outdir+ " >> data_log.txt 2>&1")
-      subprocess.check_call("spades.py --careful "+phred_offset+" --pe1-s "+combined_fq+" --pe1-1 "+mapped_fq1+" --pe1-2 "+mapped_fq2+" -t "+t+" -o "+outdir+ " >> data_log.txt 2>&1",shell=True)
-    else:
-      subprocess.check_call("spades.py --careful "+phred_offset+" --pe1-s "+combined_fq+" -t "+t+" -o "+outdir+ " >> data_log.txt 2>&1",shell=True)
     new_fasta=fnameA+"_"+database+"_"+mapping_mode+".fasta"
-    #new_fasta=fnameA+"_"+database.split('/')[-1]+"_"+mapping_mode+".fasta" # change path to databse for packaging
-    subprocess.check_call("mv "+outdir+"/contigs.fasta "+new_fasta+ " 2> /dev/null",shell=True)
-    #os.system("mv "+outdir+"/scaffolds.fasta "+new_fasta+ " 2> /dev/null") contigs.fasta
-    subprocess.check_call("rm -rf "+outdir+ " 2> /dev/null",shell=True)
-    print("blasting...","\n")
-    xmlfile="blasted_output.xml"#fnameA+"-extracted_vs_"+database+"_"+mapping_mode+".xml"
-    subprocess.check_call('makeblastdb -in '+new_fasta+' -out '+new_fasta+'_db '+'-dbtype nucl >> data_log.txt 2>&1',shell=True) #temp.txt is to forbid the blast result interrupt the output of our program###1/27/2015
-    subprocess.check_call("blastn -query "+database+" -db "+new_fasta+"_db -out "+xmlfile+" -outfmt 5 >> data_log.txt 2>&1",shell=True)###1/27/2015; 08272018, remove "-word_size 10"
+    # These tools parse paths again internally, even when shell=False. Use
+    # literal, simple paths for their work files, independent of the user's
+    # input names and output directory. Copies preserve all read content.
+    with tempfile.TemporaryDirectory(prefix="seqsero2_", dir="/tmp") as scratch:
+      combined = os.path.join(scratch, "combined.fastq")
+      shutil.copyfile(combined_fq, combined)
+      options = [] if phred_offset == 'auto' else ["--phred-offset", phred_offset]
+      command = ["spades.py", "--careful"] + options + ["--pe1-s", combined]
+      if fnameB:
+        forward = os.path.join(scratch, "forward.fastq")
+        reverse = os.path.join(scratch, "reverse.fastq")
+        shutil.copyfile(mapped_fq1, forward)
+        shutil.copyfile(mapped_fq2, reverse)
+        command += ["--pe1-1", forward, "--pe1-2", reverse]
+      outdir = os.path.join(scratch, "assembly")
+      run_command(command + ["-t", str(t), "-o", outdir])
+      contigs = os.path.join(outdir, "contigs.fasta")
+      shutil.copyfile(contigs, new_fasta)
+      print("blasting...", "\n")
+      xmlfile = "blasted_output.xml"
+      blast_db = os.path.join(scratch, "blast_db")
+      run_command(["makeblastdb", "-in", contigs, "-out", blast_db, "-dbtype", "nucl"])
+      run_command(["blastn", "-query", database, "-db", blast_db, "-out", xmlfile, "-outfmt", "5"])
   else:
     xmlfile="NA"
   return xmlfile,new_fasta
 
 def judge_subspecies(fnameA):
   #seqsero2 -a; judge subspecies on just forward raw reads fastq
-  salmID_output=subprocess.Popen("SalmID.py -i "+fnameA,shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-  out, err = salmID_output.communicate()
+  result = subprocess.run(["SalmID.py", "-i", fnameA], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+  out = result.stdout
   out=out.decode("utf-8")
   file=open("data_log.txt","a")
   file.write(out)
   file.close()
-  salm_species_scores=out.split("\n")[1].split("\t")[6:]
+  rows = [line.split("\t") for line in out.splitlines() if line.strip()]
+  if len(rows) != 2 or len(rows[0]) < 8 or len(rows[0]) != len(rows[1]):
+    raise RuntimeError("SalmID returned an invalid result table; see data_log.txt")
+  try:
+    [float(value) for value in rows[1][4:]]
+  except ValueError as error:
+    raise RuntimeError("SalmID returned non-numeric scores; see data_log.txt") from error
+  salm_species_scores=rows[1][6:]
   salm_species_results=out.split("\n")[0].split("\t")[6:]
   max_score=0
   max_score_index=1 #default is 1, means "I"
@@ -1335,26 +1428,35 @@ subspecies_ID_dir = {'I': 'Salmonella enterica subspecies enterica (subspecies I
 
 ## ed_SL_08172020: format check for fasta or fastq in nanopore workflow, convert raw reads fastq to fasta
 def format_check(input_file):
-  line=open(input_file,'r').readline()
+  opener = gzip.open if input_file.endswith('.gz') else open
+  with opener(input_file, 'rt') as source:
+    line = source.readline()
   if line.startswith('>'):
-    output_file = input_file
+    if input_file.endswith('.gz'):
+      output_file = input_file + '.fasta'
+      with gzip.open(input_file, 'rb') as source, open(output_file, 'wb') as output:
+        shutil.copyfileobj(source, output)
+    else:
+      output_file = input_file
   elif line.startswith('@'):
     input_file_fa = input_file + '.fasta'
-    subprocess.check_call("seqtk seq -A "+input_file+" > "+input_file_fa,shell=True)
+    run_command(["seqtk", "seq", "-A", input_file], stdout=input_file_fa)
     output_file = input_file_fa
   else:
-    print ('please check the format of input files')
+    raise ValueError('input must be FASTA or FASTQ: ' + input_file)
   return (output_file)
 ##
 
 def main():
   #combine SeqSeroK and SeqSero2, also with SalmID
   args = parse_args()
+  if args.check:
+    return check_dependencies()
   input_file = args.i
   data_type = args.t
   analysis_mode = args.m
   mapping_mode=args.b
-  threads=args.p
+  threads=str(args.p)
   make_dir=args.d
   clean_mode=args.c
   sample_name=args.n
@@ -1367,42 +1469,31 @@ def main():
   database="H_and_O_and_specific_genes.fasta"
   note="Note:	"
   NA_note="This predicted serotype is not in the Kauffman-White scheme. " # ed_SL_09272019: add for new output format
-  if len(sys.argv)==1:
-    subprocess.check_call(dirpath+"/SeqSero2_package.py -h",shell=True)#change name of python file
-  else:
+  with working_directory(os.getcwd()):
     request_id = time.strftime("%m_%d_%Y_%H_%M_%S", time.localtime())
     request_id += str(random.randint(1, 10000000))
     if make_dir is None:
       make_dir="SeqSero_result_"+request_id
     make_dir=os.path.abspath(make_dir)
-    if os.path.isdir(make_dir):
-      pass
-    else:
-      subprocess.check_call("mkdir -p "+make_dir,shell=True)
-    #subprocess.check_call("cp "+dirpath+"/"+database+" "+" ".join(input_file)+" "+make_dir,shell=True)
-    #subprocess.check_call("ln -sr "+dirpath+"/"+database+" "+" ".join(input_file)+" "+make_dir,shell=True)
-    subprocess.check_call("ln -f -s "+seqsero2_db+" "+" ".join(input_file)+" "+make_dir,shell=True) # ed_SL_11092019: change path to database for packaging 
-    #subprocess.check_call("ln -f -s "+dirpath+"/"+database+" "+" ".join(input_file)+" "+make_dir,shell=True) ### use -f option to force the replacement of links, remove -r and use absolute path instead to avoid link issue (use 'type=os.path.abspath' in -i argument).
+    try:
+      prepare_output_directory(make_dir, [seqsero2_db] + input_file)
+    except FileExistsError:
+      raise SystemExit("output directory already exists; choose a new -d directory: " + make_dir)
   ############################begin the real analysis 
     if analysis_mode=="a":
       if data_type in ["1","2","3"]:#use allele mode
         for_fq,rev_fq=get_input_files(make_dir,input_file,data_type,dirpath)
         os.chdir(make_dir)
         ###add a function to tell input files
-        fnameA=for_fq.split("/")[-1]
-        fnameB=rev_fq.split("/")[-1]
+        fnameA=os.path.join(".", os.path.basename(for_fq))
+        fnameB=os.path.join(".", os.path.basename(rev_fq)) if rev_fq else ""
         current_time=time.strftime("%Y_%m_%d_%H_%M_%S", time.localtime())
         sam,bam,sorted_bam,mapped_fq1,mapped_fq2,combined_fq,for_sai,rev_sai=get_temp_file_names(fnameA,fnameB) #get temp files id
         map_and_sort(threads,database,fnameA,fnameB,sam,bam,for_sai,rev_sai,sorted_bam,mapping_mode) #do mapping and sort
 
-        ### avoid error out when micro assembly fails. ed_SL_03172020
-        try:
-          xmlfile,new_fasta=extract_mapped_reads_and_do_assembly_and_blast(current_time,sorted_bam,combined_fq,mapped_fq1,mapped_fq2,threads,fnameA,fnameB,database,mapping_mode,phred_offset) #extract the mapped reads and do micro assembly and blast
-        except (UnboundLocalError, subprocess.CalledProcessError):
-          xmlfile="NA"
-          H1_cont_stat_list=[]
-          H2_cont_stat_list=[]
-        ###
+        H1_cont_stat_list=[]
+        H2_cont_stat_list=[]
+        xmlfile,new_fasta=extract_mapped_reads_and_do_assembly_and_blast(current_time,sorted_bam,combined_fq,mapped_fq1,mapped_fq2,threads,fnameA,fnameB,database,mapping_mode,phred_offset)
         if xmlfile=="NA":
           O_choice,fliC_choice,fljB_choice,special_gene_list,contamination_O,contamination_H=("-","-","-",[],"","")
         else:
@@ -1455,7 +1546,8 @@ def main():
           print ("Sample name:\t"+sample_name)
         ###
         if clean_mode:
-          subprocess.check_call("rm -rf "+make_dir,shell=True)
+          os.chdir(os.path.dirname(make_dir))
+          shutil.rmtree(make_dir)
           make_dir="none-output-directory due to '-c' flag"
         else:
           new_file=open("SeqSero_result.txt","w")
@@ -1500,7 +1592,7 @@ def main():
           tsv_file.close()
           #subprocess.check_call("cat Seqsero_result.txt",shell=True)
           #subprocess.call("rm H_and_O_and_specific_genes.fasta* *.sra *.bam *.sam *.fastq *.gz *.fq temp.txt *.xml "+fnameA+"*_db* 2> /dev/null",shell=True)
-          subprocess.call("rm H_and_O_and_specific_genes.fasta* *.sra *.bam *.sam *.fastq *.gz *.fq temp.txt "+fnameA+"*_db* 2> /dev/null",shell=True)
+          remove_temporary_files(["H_and_O_and_specific_genes.fasta*", "*.sra", "*.bam", "*.sam", "*.fastq", "*.gz", "*.fq", "temp.txt", __import__("glob").escape(fnameA) + "*_db*"])
         if "N/A" not in predict_sero:
           #print("Output_directory:"+make_dir+"\nInput files:\t"+for_fq+" "+rev_fq+"\n"+"O antigen prediction:\t"+O_choice+"\n"+"H1 antigen prediction(fliC):\t"+fliC_choice+"\n"+"H2 antigen prediction(fljB):\t"+fljB_choice+"\n"+"Predicted antigenic profile:\t"+predict_form+"\n"+"Predicted subspecies:\t"+subspecies+"\n"+"Predicted serotype(s):\t"+predict_sero+star+"\nNote:"+contamination_report+star+star_line+claim+"\n")#+##
           print("Output directory:\t"+make_dir+"\n"+
@@ -1529,15 +1621,18 @@ def main():
       ex_dir = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)),'seqsero2_db')) # ed_SL_09152019: change ex_dir for packaging
       #output_mode = args.mode
       for_fq,rev_fq=get_input_files(make_dir,input_file,data_type,dirpath)
-      input_file = for_fq #-k will just use forward because not all reads were used
+      reported_input_files = " ".join(input_file)
+      input_file = os.path.join(".", os.path.basename(for_fq))
       os.chdir(make_dir)
       ### ed_SL_08182020: use assembly workflow for nanopore fastq, convert fastq to fasta
       if data_type == "5":
-        input_file = format_check(for_fq)
+        input_file = format_check(input_file)
       ###
       f = open(ex_dir + '/antigens.pickle', 'rb')
       lib_dict = pickle.load(f)
       f.close
+      if input_file.endswith('.gz') and data_type in ['4', '5']:
+        input_file = format_check(input_file)
       input_Ks=get_input_K(input_file,lib_dict,data_type,k_size)
       O_dict,H_dict,Special_dict=get_kmer_dict(lib_dict,input_Ks)
       highest_O,highest_fliC,highest_fljB=call_O_and_H_type(O_dict,H_dict,Special_dict,make_dir)
@@ -1576,7 +1671,8 @@ def main():
       ###
 
       if clean_mode:
-        subprocess.check_call("rm -rf "+make_dir,shell=True)
+        os.chdir(os.path.dirname(make_dir))
+        shutil.rmtree(make_dir)
         make_dir="none-output-directory due to '-c' flag"
       else:
         new_file=open("SeqSero_result.txt","w")
@@ -1609,7 +1705,7 @@ def main():
         ###
         if "N/A" not in predict_sero:
           new_file.write("Output directory:\t"+make_dir+"\n"+
-                         "Input files:\t"+input_file+"\n"+
+                         "Input files:\t"+reported_input_files+"\n"+
                          "O antigen prediction:\t"+O_choice+"\n"+
                          "H1 antigen prediction(fliC):\t"+highest_fliC+"\n"+
                          "H2 antigen prediction(fljB):\t"+highest_fljB+"\n"+
@@ -1617,12 +1713,12 @@ def main():
                          "Predicted antigenic profile:\t"+predict_form+"\n"+
                          "Predicted serotype:\t"+predict_sero+"\n"+
                          note+star_line+claim+antigen_note+"\n")#+##
-          tsv_file.write(make_dir+"\t"+input_file+"\t"+O_choice+"\t"+highest_fliC+"\t"+highest_fljB+"\t"+subspecies_ID_dir[ssp_pointer]+"\t"+predict_form+"\t"+predict_sero+"\t"+star_line+claim+antigen_note+"\n")
+          tsv_file.write(make_dir+"\t"+reported_input_files+"\t"+O_choice+"\t"+highest_fliC+"\t"+highest_fljB+"\t"+subspecies_ID_dir[ssp_pointer]+"\t"+predict_form+"\t"+predict_sero+"\t"+star_line+claim+antigen_note+"\n")
         else:
           #star_line=star_line.strip()+"\tNone such antigenic formula in KW.\n"
           #star_line = "" #changed for new output requirement, 04132019
           new_file.write("Output directory:\t"+make_dir+"\n"+
-                         "Input files:\t"+input_file+"\n"+
+                         "Input files:\t"+reported_input_files+"\n"+
                          "O antigen prediction:\t"+O_choice+"\n"+
                          "H1 antigen prediction(fliC):\t"+highest_fliC+"\n"+
                          "H2 antigen prediction(fljB):\t"+highest_fljB+"\n"+
@@ -1630,13 +1726,13 @@ def main():
                          "Predicted antigenic profile:\t"+predict_form+"\n"+
                          "Predicted serotype:\t"+subspecies+' '+predict_form+"\n"+ # add serotype output for "N/A" prediction, subspecies
                          note+NA_note+star_line+claim+antigen_note+"\n")#+##
-          tsv_file.write(make_dir+"\t"+input_file+"\t"+O_choice+"\t"+highest_fliC+"\t"+highest_fljB+"\t"+subspecies_ID_dir[ssp_pointer]+"\t"+predict_form+"\t"+subspecies+' '+predict_form+"\t"+NA_note+star_line+claim+antigen_note+"\n")
+          tsv_file.write(make_dir+"\t"+reported_input_files+"\t"+O_choice+"\t"+highest_fliC+"\t"+highest_fljB+"\t"+subspecies_ID_dir[ssp_pointer]+"\t"+predict_form+"\t"+subspecies+' '+predict_form+"\t"+NA_note+star_line+claim+antigen_note+"\n")
         new_file.close()
         tsv_file.close()
-        subprocess.call("rm *.fasta* *.fastq *.gz *.fq temp.txt *.sra 2> /dev/null",shell=True)
+        remove_temporary_files(["*.fasta*", "*.fastq", "*.gz", "*.fq", "temp.txt", "*.sra"])
       if "N/A" not in predict_sero:
         print("Output directory:\t"+make_dir+"\n"+
-              "Input files:\t"+input_file+"\n"+
+              "Input files:\t"+reported_input_files+"\n"+
               "O antigen prediction:\t"+O_choice+"\n"+
               "H1 antigen prediction(fliC):\t"+highest_fliC+"\n"+
               "H2 antigen prediction(fljB):\t"+highest_fljB+"\n"+
@@ -1646,7 +1742,7 @@ def main():
               note+star_line+claim+antigen_note+"\n")#+##
       else:
         print("Output directory:\t"+make_dir+"\n"+
-              "Input files:\t"+input_file+"\n"+
+              "Input files:\t"+reported_input_files+"\n"+
               "O antigen prediction:\t"+O_choice+"\n"+
               "H1 antigen prediction(fliC):\t"+highest_fliC+"\n"+
               "H2 antigen prediction(fljB):\t"+highest_fljB+"\n"+
@@ -1656,4 +1752,4 @@ def main():
               note+NA_note+star_line+claim+antigen_note+"\n")#+##
 
 if __name__ == '__main__':
-  main()
+  sys.exit(main())

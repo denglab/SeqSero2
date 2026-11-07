@@ -95,7 +95,7 @@ def get_salmid_rpoB_database(ex_dir):
 
 def main():
   args = parse_args()
-  ex_dir = os.path.dirname(os.path.realpath(__file__))
+  ex_dir = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'seqsero2_db'))
   lib_dict = multifasta_to_kmers_dict(ex_dir + '/H_and_O_and_specific_genes.fasta')
   invA_dict=get_salmid_invA_database(ex_dir)
   #rpoB_dict=get_salmid_rpoB_database(ex_dir)

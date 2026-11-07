@@ -15,16 +15,21 @@
 # http://thegenomefactory.blogspot.com.au/2012/05/cool-use-of-unix-paste-with-ngs.html
 
 # Set up some defaults
+set -euo pipefail
+if [[ $# -lt 2 || $# -gt 3 ]]; then
+  echo "Usage: deinterleave_fastq.sh forward.fastq reverse.fastq [compress]" >&2
+  exit 2
+fi
 GZIP_OUTPUT=0
 PIGZ_COMPRESSION_THREADS=10
 
 # If the third argument is the word "compress" then we'll compress the output using pigz
-if [[ $3 == "compress" ]]; then
+if [[ ${3:-} == "compress" ]]; then
   GZIP_OUTPUT=1
 fi
 
 if [[ ${GZIP_OUTPUT} == 0 ]]; then
-  paste - - - - - - - -  | tee >(cut -f 1-4 | tr "\t" "\n" > $1) | cut -f 5-8 | tr "\t" "\n" > $2
+  paste - - - - - - - -  | tee >(cut -f 1-4 | tr "\t" "\n" > "$1") | cut -f 5-8 | tr "\t" "\n" > "$2"
 else
-  paste - - - - - - - -  | tee >(cut -f 1-4 | tr "\t" "\n" | pigz --best --processes ${PIGZ_COMPRESSION_THREADS} > $1) | cut -f 5-8 | tr "\t" "\n" | pigz --best --processes ${PIGZ_COMPRESSION_THREADS} > $2
+  paste - - - - - - - -  | tee >(cut -f 1-4 | tr "\t" "\n" | pigz --best --processes ${PIGZ_COMPRESSION_THREADS} > "$1") | cut -f 5-8 | tr "\t" "\n" | pigz --best --processes ${PIGZ_COMPRESSION_THREADS} > "$2"
 fi

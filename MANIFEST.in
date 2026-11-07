@@ -8,3 +8,8 @@ include seqsero2_db/H_and_O_and_specific_genes.fasta
 include seqsero2_db/invA_mers_dict
 include seqsero2_db/special.pickle
 include bin/deinterleave_fastq.sh
+include pyproject.toml
+include environment.yml
+recursive-include docs *.md
+recursive-include packaging *.yaml
+recursive-include tests *.py
