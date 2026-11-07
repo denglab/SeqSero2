@@ -6,60 +6,29 @@ Online version: http://www.denglab.info/SeqSero2
 # Introduction 
 SeqSero2 is a pipeline for Salmonella serotype prediction from raw sequencing reads or genome assemblies
 
-# Dependencies 
-SeqSero2 has three workflows:
+# Dependencies and installation
 
-(A) Allele micro-assembly (default). This workflow takes raw reads as input and performs targeted assembly of serotype determinant alleles. Assembled alleles are used to predict serotype and flag potential inter-serotype contamination in sequencing data (i.e., presence of reads from multiple serotypes due to, for example, cross or carryover contamination during sequencing). 
+Python >=3.8 and Biopython >=1.75 are required. Biopython 1.74 has a historical BLAST XML parser problem; it is excluded by the minimum version. The validation report records tested versions rather than implying that every version above a minimum was tested.
 
-Allele micro-assembly workflow depends on:
+| Workflow | Additional programs |
+|---|---|
+| Raw-read allele microassembly (`-m a`, default) | BWA >=0.7.12, samtools >=1.8, BLAST+ >=2.2.28 (`blastn`, `makeblastdb`), SPAdes >=3.15.5, SalmID 0.1.23 (`SalmID.py`) |
+| Raw-read k-mer (`-m k -t 1/2/3`) | No external tool for FASTQ; SRA Toolkit >=2.8.0 only when supplying `.sra` archives |
+| Assembly k-mer (`-m k -t 4`) | No external tool for FASTA |
+| Nanopore k-mer (`-m k -t 5`) | seqtk >=1.3 when converting FASTQ to FASTA |
 
-1. Python 3;
+Bedtools is no longer called: current read extraction uses `samtools bam2fq`. `--check` checks the union of supported workflow executables and returns a nonzero status when any are missing; a missing optional program does not prevent workflows that do not use it.
 
-2. Biopython 1.73;
+Create an environment and install this checkout:
 
-3. [Burrows-Wheeler Aligner v0.7.12](http://sourceforge.net/projects/bio-bwa/files/);
-
-4. [Samtools v1.8](http://sourceforge.net/projects/samtools/files/samtools/);
-
-5. [NCBI BLAST v2.2.28+](https://blast.ncbi.nlm.nih.gov/Blast.cgi?PAGE_TYPE=BlastDocs&DOC_TYPE=Download);
-
-6. [SRA Toolkit v2.8.0](http://www.ncbi.nlm.nih.gov/Traces/sra/sra.cgi?cmd=show&f=software&m=software&s=software);
-
-7. [SPAdes v3.15.5](http://bioinf.spbau.ru/spades);
-
-8. [Bedtools v2.17.0](http://bedtools.readthedocs.io/en/latest/);
-
-9. [SalmID v0.11](https://github.com/hcdenbakker/SalmID).
-
-
-(B) Raw reads k-mer. This workflow takes raw reads as input and performs rapid serotype prediction based on unique k-mers of serotype determinants. 
-
-Raw reads k-mer workflow (originally SeqSeroK) depends on:
-
-1. Python 3;
-2. [SRA Toolkit](http://www.ncbi.nlm.nih.gov/Traces/sra/sra.cgi?cmd=show&f=software&m=software&s=software) (optional, just used to fastq-dump sra files);
-
-
-(C) Genome assembly k-mer. This workflow takes genome assemblies as input and the rest of the workflow largely overlaps with the raw reads k-mer workflow
-
-# Installation
-### Conda
-To install the latest SeqSero2 Conda package (recommended):  
+```sh
+conda env create -f environment.yml
+conda activate seqsero2
+python -m pip install .
+SeqSero2_package.py --check
 ```
-conda install -c bioconda seqsero2=1.3.1
-```
-### Git
-To install the SeqSero2 git repository locally:
-```
-git clone https://github.com/denglab/SeqSero2.git
-cd SeqSero2
-python3 -m pip install --user .
-```
-### Other options
-Third party SeqSero2 installations (may not be the latest version of SeqSero2): \
-https://github.com/B-UMMI/docker-images/tree/master/seqsero2 \
-https://github.com/denglab/SeqSero2/issues/13
 
+On Apple Silicon, create a native environment with `conda env create --platform osx-arm64 -f environment.yml`. Existing published Bioconda builds may retain their old dependency pins; installing this checkout does not update those external builds. `packaging/conda-meta.proposed.yaml` is a proposed local-source recipe, not a published package.
 
 # Executing the code 
 Make sure all SeqSero2 and its dependency executables are added to your path (e.g. to ~/.bashrc). Then type SeqSero2_package.py to get detailed instructions.
@@ -115,3 +84,25 @@ SeqSero2: rapid and improved Salmonella serotype determination using whole genom
 Zhang S, Yin Y, Jones MB, Zhang Z, Deatherage Kaiser BL, Dinsmore BA, Fitzgerald C, Fields PI, Deng X.  
 Salmonella serotype determination utilizing high-throughput genome sequencing data.  
 **J Clin Microbiol. 2015 May;53(5):1685-92.** [PMID: 25762776](http://jcm.asm.org/content/early/2015/03/05/JCM.00323-15)
+
+# Workflow and input notes
+
+The allele workflow maps reads to the determinant reference, extracts mapped reads, assembles them with SPAdes, scores BLAST alignments, assigns O/H determinants and then applies the existing serotype interpretation table. Species/subspecies identification in this workflow is delegated to SalmID, using the forward input. A tool failure returns a nonzero exit and is not converted into a successful antigen-negative report.
+
+The raw-read k-mer workflow uses selected 27-mers from the forward input for speed. The paired-end report lists both submitted paths as provenance; this does not mean both mates were sampled. The assembly workflow compares reference 27-mers with assembly sequence directly. It does not remap reads, assemble, or run BLAST. These are different scoring methods and can disagree on incomplete or divergent determinants.
+
+K-mer subspecies identification uses the bundled invA marker sets; it is not an abundance estimate or a validated mixed-subspecies classifier. Retain taxonomic/QC evidence when results disagree. Updating subspecies taxonomy or training references requires a separate reference validation.
+
+Use `-t 2 -i forward.fastq.gz reverse.fastq.gz` for separated mates, `-t 1` for a single interleaved FASTQ, `-t 3` for single reads, `-m k -t 4 -i assembly.fna` for assemblies, and `-m k -t 5` for nanopore FASTA/FASTQ. FASTA starts with `>name`; FASTQ has a `@name`, sequence, `+`, and matching-length quality line. Supply readable file paths. For Docker, mount the host directory and use paths inside the container, for example `-v /absolute/reads:/data`, then `-t 2 -i /data/R1.fastq.gz /data/R2.fastq.gz`.
+
+Output directories must be new, including with `-c`; existing files are never overwritten or removed. Quote paths containing whitespace or shell metacharacters. The program passes literal arguments to tools and uses simple temporary paths for SPAdes/BLAST.
+
+Paratyphi B marker scoring uses the strongest positive and negative evidence across the original and added context probes. It is independent of MLST. Missing or tied state evidence is reported as an unresolved tartrate variant. The additional negative context probe is a designed SNP counterpart, not a naturally sampled ST28 negative isolate. See the issue resolution report for tested samples and limits.
+
+# Combining results
+
+```sh
+SeqSero2_summarize.py results/*/SeqSero_result.tsv -o combined.tsv
+```
+
+The helper joins columns by header name so allele and k-mer reports can be combined. Use reports generated without `-s` (headers are required). Existing summary files are not overwritten. For many genomes, loop over one assembly per invocation and include `-m k -t 4`; shell globs that exceed the OS argument limit must be processed in a loop.
